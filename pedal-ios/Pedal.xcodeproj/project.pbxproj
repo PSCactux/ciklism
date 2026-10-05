@@ -1,0 +1,493 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		022D8072D0E4DDFB2D29A29A /* SessionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4BE3D9BD18A9A7EF2CF354 /* SessionController.swift */; };
+		03300CBA42F8BE66E6350CCF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E11CD1EA03486E6A437D2B6 /* ContentView.swift */; };
+		069F18C710BB7FC13DE431A8 /* PedalPeakDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC4664EF4A31524074AF1BC0 /* PedalPeakDetectorTests.swift */; };
+		13EF9BB13CBB3C9694B0C280 /* CrankState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA9485663D6A1D414AD883 /* CrankState.swift */; };
+		15414BBF5361885579F234DE /* CSCMeasurement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF6269CB76DBDEF8FA58C05 /* CSCMeasurement.swift */; };
+		17CC3AAB35302E9702E50703 /* CSCMeasurementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3631C979E29285E4C011EDB /* CSCMeasurementTests.swift */; };
+		201CBB68DC3D577E79D764D8 /* BleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7982450770C86485A3620E9 /* BleDetailView.swift */; };
+		259FB9B4E242E884A8CFB3C6 /* RawMotionLoggerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4198BDC3A79872B6861C3AF2 /* RawMotionLoggerTests.swift */; };
+		331293FAD68B43FECCCBB281 /* SessionControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD3A0F91B4D01488295C347 /* SessionControllerTests.swift */; };
+		3A4F75E1984D959BA9756CAA /* RawMotionLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30C28A5C9E06145D3318E3E7 /* RawMotionLogger.swift */; };
+		411B9DA187784AE38873B787 /* PedalPeakDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116D07D39CEC09D395A29E9F /* PedalPeakDetector.swift */; };
+		5D3901F2E7B4B58C66804662 /* DebugChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48BCF6AC0D9009B1BCCBC7CA /* DebugChartView.swift */; };
+		7A1A983CCD2CFB2D53F86165 /* CadenceEstimatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 569C6FA7AD79107560333091 /* CadenceEstimatorTests.swift */; };
+		A94CCBCB537AEF5EB75E3FB9 /* CadenceEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C02228A3923195E690EC529D /* CadenceEstimator.swift */; };
+		C0CD6903C5E3FC62AF5313D0 /* CadenceSimulatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA53E59B3741E3C03A0D1C1 /* CadenceSimulatorTests.swift */; };
+		CE9E1A00B450D51F0151B911 /* CadenceSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBEAC2E5F4096C324823410B /* CadenceSimulator.swift */; };
+		D4CCB56C50324B5FFF30F5CD /* MotionRevolutionSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0321DE1E08D31F3D1DAA56BE /* MotionRevolutionSource.swift */; };
+		D9308517B078AA658A4811E1 /* CrankStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 002A63A30C79AE3F351A38D4 /* CrankStateTests.swift */; };
+		E15AA23CD0FA78DA5966C5A2 /* CalibrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E105D41546E423E5E3CAC701 /* CalibrationTests.swift */; };
+		EBC48CA9B460068F2B2DBFB2 /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 686F4BD1576A0E5EBECC4855 /* SmokeTests.swift */; };
+		F660638BAA5890C5AC55D5C8 /* CadencePeripheral.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57BCA2A770DC470C68DF587C /* CadencePeripheral.swift */; };
+		F9F35702CD0B265DF5D13C6B /* PedalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ACAF6453A500914FABA39C3 /* PedalApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		01AF4218DC26A7B65D64887C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29E68A4F0381B2D964848E51 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C3581D501CB219290292D866;
+			remoteInfo = Pedal;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		002A63A30C79AE3F351A38D4 /* CrankStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrankStateTests.swift; sourceTree = "<group>"; };
+		0321DE1E08D31F3D1DAA56BE /* MotionRevolutionSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionRevolutionSource.swift; sourceTree = "<group>"; };
+		0CBDA06D9746A2E82EE073DD /* Pedal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pedal.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		116D07D39CEC09D395A29E9F /* PedalPeakDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PedalPeakDetector.swift; sourceTree = "<group>"; };
+		17055EF61AD89E7909A1FF20 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		30C28A5C9E06145D3318E3E7 /* RawMotionLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawMotionLogger.swift; sourceTree = "<group>"; };
+		3AD3A0F91B4D01488295C347 /* SessionControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionControllerTests.swift; sourceTree = "<group>"; };
+		4198BDC3A79872B6861C3AF2 /* RawMotionLoggerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawMotionLoggerTests.swift; sourceTree = "<group>"; };
+		48BCF6AC0D9009B1BCCBC7CA /* DebugChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugChartView.swift; sourceTree = "<group>"; };
+		569C6FA7AD79107560333091 /* CadenceEstimatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CadenceEstimatorTests.swift; sourceTree = "<group>"; };
+		57BCA2A770DC470C68DF587C /* CadencePeripheral.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CadencePeripheral.swift; sourceTree = "<group>"; };
+		5ACAF6453A500914FABA39C3 /* PedalApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PedalApp.swift; sourceTree = "<group>"; };
+		686F4BD1576A0E5EBECC4855 /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
+		95AA9485663D6A1D414AD883 /* CrankState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrankState.swift; sourceTree = "<group>"; };
+		9AF6269CB76DBDEF8FA58C05 /* CSCMeasurement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSCMeasurement.swift; sourceTree = "<group>"; };
+		9E11CD1EA03486E6A437D2B6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		AC4664EF4A31524074AF1BC0 /* PedalPeakDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PedalPeakDetectorTests.swift; sourceTree = "<group>"; };
+		C02228A3923195E690EC529D /* CadenceEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CadenceEstimator.swift; sourceTree = "<group>"; };
+		C31F95AF9FD60AE3737A998B /* PedalTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PedalTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C3631C979E29285E4C011EDB /* CSCMeasurementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSCMeasurementTests.swift; sourceTree = "<group>"; };
+		CDA53E59B3741E3C03A0D1C1 /* CadenceSimulatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CadenceSimulatorTests.swift; sourceTree = "<group>"; };
+		DD4BE3D9BD18A9A7EF2CF354 /* SessionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionController.swift; sourceTree = "<group>"; };
+		E105D41546E423E5E3CAC701 /* CalibrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationTests.swift; sourceTree = "<group>"; };
+		E7982450770C86485A3620E9 /* BleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BleDetailView.swift; sourceTree = "<group>"; };
+		EBEAC2E5F4096C324823410B /* CadenceSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CadenceSimulator.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		023F9C7E285894701CDFBEA7 /* BLE */ = {
+			isa = PBXGroup;
+			children = (
+				57BCA2A770DC470C68DF587C /* CadencePeripheral.swift */,
+			);
+			path = BLE;
+			sourceTree = "<group>";
+		};
+		314ADE4322E19946DB5EE4DA = {
+			isa = PBXGroup;
+			children = (
+				CA1AB4CD10B0CD600FDD300C /* Pedal */,
+				E59EB52400A259C296FE1348 /* PedalTests */,
+				CA7166F831001624D8613325 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		877B3471F200D917BB5D6C5D /* Sensors */ = {
+			isa = PBXGroup;
+			children = (
+				0321DE1E08D31F3D1DAA56BE /* MotionRevolutionSource.swift */,
+				30C28A5C9E06145D3318E3E7 /* RawMotionLogger.swift */,
+			);
+			path = Sensors;
+			sourceTree = "<group>";
+		};
+		9A54115231431646918D60EF /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				E7982450770C86485A3620E9 /* BleDetailView.swift */,
+				9E11CD1EA03486E6A437D2B6 /* ContentView.swift */,
+				48BCF6AC0D9009B1BCCBC7CA /* DebugChartView.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		CA1AB4CD10B0CD600FDD300C /* Pedal */ = {
+			isa = PBXGroup;
+			children = (
+				17055EF61AD89E7909A1FF20 /* Info.plist */,
+				5ACAF6453A500914FABA39C3 /* PedalApp.swift */,
+				DD4BE3D9BD18A9A7EF2CF354 /* SessionController.swift */,
+				023F9C7E285894701CDFBEA7 /* BLE */,
+				E6D8512175E8D5468ECE7C1A /* Domain */,
+				877B3471F200D917BB5D6C5D /* Sensors */,
+				9A54115231431646918D60EF /* UI */,
+			);
+			path = Pedal;
+			sourceTree = "<group>";
+		};
+		CA7166F831001624D8613325 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				0CBDA06D9746A2E82EE073DD /* Pedal.app */,
+				C31F95AF9FD60AE3737A998B /* PedalTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E59EB52400A259C296FE1348 /* PedalTests */ = {
+			isa = PBXGroup;
+			children = (
+				569C6FA7AD79107560333091 /* CadenceEstimatorTests.swift */,
+				CDA53E59B3741E3C03A0D1C1 /* CadenceSimulatorTests.swift */,
+				E105D41546E423E5E3CAC701 /* CalibrationTests.swift */,
+				002A63A30C79AE3F351A38D4 /* CrankStateTests.swift */,
+				C3631C979E29285E4C011EDB /* CSCMeasurementTests.swift */,
+				AC4664EF4A31524074AF1BC0 /* PedalPeakDetectorTests.swift */,
+				4198BDC3A79872B6861C3AF2 /* RawMotionLoggerTests.swift */,
+				3AD3A0F91B4D01488295C347 /* SessionControllerTests.swift */,
+				686F4BD1576A0E5EBECC4855 /* SmokeTests.swift */,
+			);
+			path = PedalTests;
+			sourceTree = "<group>";
+		};
+		E6D8512175E8D5468ECE7C1A /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				C02228A3923195E690EC529D /* CadenceEstimator.swift */,
+				EBEAC2E5F4096C324823410B /* CadenceSimulator.swift */,
+				95AA9485663D6A1D414AD883 /* CrankState.swift */,
+				9AF6269CB76DBDEF8FA58C05 /* CSCMeasurement.swift */,
+				116D07D39CEC09D395A29E9F /* PedalPeakDetector.swift */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9450B60BE1EC8ABB13CBF9FF /* PedalTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 29DE4A61A1C53E9CF01861B0 /* Build configuration list for PBXNativeTarget "PedalTests" */;
+			buildPhases = (
+				1F6851271A770D00BC0615DA /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CA2554DE5A02610334B18693 /* PBXTargetDependency */,
+			);
+			name = PedalTests;
+			packageProductDependencies = (
+			);
+			productName = PedalTests;
+			productReference = C31F95AF9FD60AE3737A998B /* PedalTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		C3581D501CB219290292D866 /* Pedal */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F99D06FCBF19659FD746E473 /* Build configuration list for PBXNativeTarget "Pedal" */;
+			buildPhases = (
+				714B7BD433ED10BF058267B9 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Pedal;
+			packageProductDependencies = (
+			);
+			productName = Pedal;
+			productReference = 0CBDA06D9746A2E82EE073DD /* Pedal.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		29E68A4F0381B2D964848E51 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+			};
+			buildConfigurationList = 90878250C3BC9AD9510EA1A0 /* Build configuration list for PBXProject "Pedal" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 314ADE4322E19946DB5EE4DA;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = CA7166F831001624D8613325 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C3581D501CB219290292D866 /* Pedal */,
+				9450B60BE1EC8ABB13CBF9FF /* PedalTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1F6851271A770D00BC0615DA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				17CC3AAB35302E9702E50703 /* CSCMeasurementTests.swift in Sources */,
+				7A1A983CCD2CFB2D53F86165 /* CadenceEstimatorTests.swift in Sources */,
+				C0CD6903C5E3FC62AF5313D0 /* CadenceSimulatorTests.swift in Sources */,
+				E15AA23CD0FA78DA5966C5A2 /* CalibrationTests.swift in Sources */,
+				D9308517B078AA658A4811E1 /* CrankStateTests.swift in Sources */,
+				069F18C710BB7FC13DE431A8 /* PedalPeakDetectorTests.swift in Sources */,
+				259FB9B4E242E884A8CFB3C6 /* RawMotionLoggerTests.swift in Sources */,
+				331293FAD68B43FECCCBB281 /* SessionControllerTests.swift in Sources */,
+				EBC48CA9B460068F2B2DBFB2 /* SmokeTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		714B7BD433ED10BF058267B9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				201CBB68DC3D577E79D764D8 /* BleDetailView.swift in Sources */,
+				15414BBF5361885579F234DE /* CSCMeasurement.swift in Sources */,
+				A94CCBCB537AEF5EB75E3FB9 /* CadenceEstimator.swift in Sources */,
+				F660638BAA5890C5AC55D5C8 /* CadencePeripheral.swift in Sources */,
+				CE9E1A00B450D51F0151B911 /* CadenceSimulator.swift in Sources */,
+				03300CBA42F8BE66E6350CCF /* ContentView.swift in Sources */,
+				13EF9BB13CBB3C9694B0C280 /* CrankState.swift in Sources */,
+				5D3901F2E7B4B58C66804662 /* DebugChartView.swift in Sources */,
+				D4CCB56C50324B5FFF30F5CD /* MotionRevolutionSource.swift in Sources */,
+				F9F35702CD0B265DF5D13C6B /* PedalApp.swift in Sources */,
+				411B9DA187784AE38873B787 /* PedalPeakDetector.swift in Sources */,
+				3A4F75E1984D959BA9756CAA /* RawMotionLogger.swift in Sources */,
+				022D8072D0E4DDFB2D29A29A /* SessionController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		CA2554DE5A02610334B18693 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C3581D501CB219290292D866 /* Pedal */;
+			targetProxy = 01AF4218DC26A7B65D64887C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		9029DFDF0BCCE9E821FFBB9F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		988864971C4F417E61FD43F4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.pscactux.PedalTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pedal.app/Pedal";
+			};
+			name = Release;
+		};
+		9CE6111098678497D231FEF4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Pedal/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.pscactux.Pedal;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B3B090F0EEA46409127CC3FB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		D8564055880B7A4496751FCC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.pscactux.PedalTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pedal.app/Pedal";
+			};
+			name = Debug;
+		};
+		EF8EE4DC11A4D1A7D8C13288 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Pedal/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.pscactux.Pedal;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		29DE4A61A1C53E9CF01861B0 /* Build configuration list for PBXNativeTarget "PedalTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D8564055880B7A4496751FCC /* Debug */,
+				988864971C4F417E61FD43F4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		90878250C3BC9AD9510EA1A0 /* Build configuration list for PBXProject "Pedal" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B3B090F0EEA46409127CC3FB /* Debug */,
+				9029DFDF0BCCE9E821FFBB9F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F99D06FCBF19659FD746E473 /* Build configuration list for PBXNativeTarget "Pedal" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EF8EE4DC11A4D1A7D8C13288 /* Debug */,
+				9CE6111098678497D231FEF4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 29E68A4F0381B2D964848E51 /* Project object */;
+}

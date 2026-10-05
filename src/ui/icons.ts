@@ -1,0 +1,22 @@
+const paths = {
+  bike: '<circle cx="5.5" cy="16.5" r="4"/><circle cx="18.5" cy="16.5" r="4"/><path d="m5.5 16.5 5-9 5 9h-10l4-6h7l2 6M15 4h4l-2 6M8 7h5"/>',
+  bluetooth: '<path d="m7 7 10 10-5 4V3l5 4L7 17"/>',
+  route: '<circle cx="6" cy="5" r="2"/><circle cx="18" cy="19" r="2"/><path d="M8 5h8a4 4 0 0 1 0 8H8a3 3 0 0 0 0 6h8"/>',
+  history: '<path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/>',
+  settings: '<path d="M4 7h5m4 0h7M4 17h9m4 0h3"/><circle cx="11" cy="7" r="2"/><circle cx="15" cy="17" r="2"/>',
+  mountain: '<path d="m2 20 8-15 5 9 3-5 5 11H2Zm5-9 3 2 3-2"/>',
+  reverse: '<path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/>',
+  check: '<path d="m5 12 4 4L19 6"/>',
+  close: '<path d="m6 6 12 12M18 6 6 18"/>',
+  pause: '<path d="M8 5v14M16 5v14"/>',
+  play: '<path d="m8 4 12 8-12 8V4Z"/>',
+  finish: '<path d="M5 21V4m0 1c5-6 9 6 15 0v10c-6 6-10-6-15 0"/>',
+  focus: '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>',
+  trophy: '<path d="M8 3h8v7a4 4 0 0 1-8 0V3ZM8 5H4v3a4 4 0 0 0 4 4m8-7h4v3a4 4 0 0 1-4 4m-4 2v6m-4 0h8"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
+  upload: '<path d="M12 15V3m-5 5 5-5 5 5M4 16v5h16v-5"/>',
+  lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 7v-3"/>',
+} as const;
+export const icons = Object.fromEntries(Object.entries(paths).map(([name, path]) => [name,
+  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`])) as Record<keyof typeof paths, string>;

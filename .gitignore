@@ -1,0 +1,27 @@
+# Dependencies and build output
+node_modules/
+dist/
+test-results/
+playwright-report/
+*.local
+
+# Environment and signing material
+.env*
+!.env.example
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+google-services.json
+GoogleService-Info.plist
+
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcresult
+.build/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store

@@ -1,0 +1,33 @@
+name: Pedal
+options:
+  bundleIdPrefix: io.github.pscactux
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  Pedal:
+    type: application
+    platform: iOS
+    sources: [Pedal]
+    info:
+      path: Pedal/Info.plist
+      properties:
+        UILaunchScreen: {}
+        NSBluetoothAlwaysUsageDescription: "Pedal emite tu cadencia por Bluetooth al visor Ciklism."
+        NSMotionUsageDescription: "Pedal usa el acelerómetro para detectar tus pedaladas."
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+  PedalTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [PedalTests]
+    dependencies:
+      - target: Pedal
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Pedal:
+    build:
+      targets:
+        Pedal: all
+    test:
+      targets: [PedalTests]

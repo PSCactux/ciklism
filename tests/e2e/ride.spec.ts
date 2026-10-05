@@ -1,0 +1,205 @@
+import { expect, test } from '@playwright/test';
+
+test('one renderer: preview → demo → pause → saved ride → reload', async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/');
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  await expect(page.getByRole('button', { name: 'Probar la ruta' })).toBeEnabled();
+  await expect(page.locator('#world')).toHaveAttribute('data-view', 'preview');
+  await page.screenshot({ path: testInfo.outputPath('home.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Probar la ruta' }).click();
+  await expect(page.locator('#source-badge')).toHaveText('DEMO · CADENCIA SIMULADA');
+  await expect(page.locator('#cadence')).toHaveText('80', { timeout: 15000 });
+  await expect(page.locator('#world')).toHaveAttribute('data-view', 'ride');
+  await expect.poll(async () => Number((await page.locator('#speed').innerText()).replace(',', '.'))).toBeGreaterThan(5);
+  await page.getByRole('button', { name: 'Subir marcha' }).click();
+  await expect(page.locator('#gear')).toHaveText('7ª');
+  await page.screenshot({ path: testInfo.outputPath('ride.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Pausar', exact: true }).click();
+  await expect(page.locator('#pause-cover')).toBeVisible();
+  const elapsed = await page.locator('#elapsed').innerText();
+  await page.waitForTimeout(1200);
+  await expect(page.locator('#elapsed')).toHaveText(elapsed);
+  await page.getByRole('button', { name: 'Seguir rodando' }).click();
+  await expect(page.locator('#pause-cover')).toBeHidden();
+  await page.getByRole('button', { name: 'Terminar', exact: false }).first().click();
+  await expect(page.getByRole('dialog')).toContainText('¿Guardamos esta salida?');
+  await page.getByRole('button', { name: 'Guardar salida', exact: false }).click();
+  await expect(page.getByRole('dialog')).toContainText('Bien rodado.');
+  await expect(page.getByRole('dialog')).toContainText('La demo no suma experiencia');
+  await page.getByRole('button', { name: 'Volver al camino' }).click();
+  await expect(page.locator('#world')).toHaveAttribute('data-view', 'preview');
+  await page.reload();
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  await page.getByRole('button', { name: 'Mis salidas' }).click();
+  await expect(page.locator('.history-row')).toHaveCount(1);
+  await expect(page.locator('.history-row')).toContainText('Demo');
+  const downloadEvent = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Exportar copia' }).click();
+  const download = await downloadEvent;
+  const backupPath = testInfo.outputPath('backup.json'); await download.saveAs(backupPath);
+  await page.locator('#import-file').setInputFiles(backupPath);
+  await expect(page.locator('#toast')).toContainText('0 salidas importadas');
+  await expect(page.locator('.history-row')).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
+test('route selection, direction, daylight and unsupported Bluetooth remain usable', async ({ page }) => {
+  const maps: string[] = [];
+  page.on('request', r => { if (r.url().includes('/lighting/') && r.url().endsWith('.webp')) maps.push(r.url()); });
+  await page.goto('/');
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  await page.getByRole('button', { name: /Valle del Río/ }).click();
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  await expect(page.locator('.preview-title h2')).toHaveText('Valle del Río');
+  await expect(page.locator('.route-facts')).toContainText('160 m');
+  await expect(page.locator('.route-facts')).toContainText('12,0');
+  const selectedMap = maps.at(-1);
+  await page.getByRole('button', { name: 'Cambiar sentido' }).click();
+  await expect(page.getByRole('button', { name: 'Sentido inverso' })).toBeVisible();
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  expect(maps.at(-1)).toBe(selectedMap);
+  await page.getByLabel('Hora del día').selectOption('atardecer');
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  expect(maps.at(-1)).not.toBe(selectedMap);
+  await page.getByRole('button', { name: 'Mi sensor', exact: true }).click();
+  await expect(page.locator('#sensor-help')).toBeVisible();
+  await expect(page.locator('#start')).toBeDisabled();
+  await page.getByRole('button', { name: 'Explorar en demo' }).click();
+  await expect(page.getByRole('button', { name: 'Probar la ruta' })).toBeEnabled();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+  expect(overflow).toBe(false);
+});
+
+test('the production app opens and rides offline after the first visit', async ({ page, context }) => {
+  await page.goto('/');
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  await page.evaluate(() => document.fonts.ready);
+  expect(await page.evaluate(() => [...document.fonts].some(f => f.family === 'Poppins' && f.status === 'loaded'))).toBe(true);
+  await page.getByRole('button', { name: /Puerto de la Loma/ }).click();
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  await expect(page.locator('.route-facts')).toContainText('20,0');
+  await page.getByRole('button', { name: 'Probar la ruta' }).click();
+  await expect(page.locator('#cadence')).toHaveText('80', { timeout: 15000 });
+  await context.setOffline(false);
+});
+
+test('a missing lightmap stops loading and the same route can be retried', async ({ page }) => {
+  await page.route('**/lighting/*.webp', route => route.abort());
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Reintentar', exact: true })).toBeEnabled({ timeout: 20000 });
+  await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#toast')).toContainText('iluminación guardada');
+  if (page.viewportSize()!.width <= 760) {
+    const toast = await page.locator('#toast').boundingBox(), start = await page.locator('#start').boundingBox();
+    expect(toast!.y + toast!.height).toBeLessThan(start!.y);
+  }
+  await page.unroute('**/lighting/*.webp');
+  await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  await expect(page.getByRole('button', { name: 'Probar la ruta' })).toBeEnabled();
+});
+
+test('quality switches and route changes reuse local photographic textures', async ({ page }, testInfo) => {
+  const errors: string[] = [], requested: string[] = [];
+  page.on('pageerror', e => errors.push(e.message));
+  page.on('request', r => { if (r.url().includes('/textures/') && r.url().endsWith('.webp')) requested.push(r.url()); });
+  await page.goto('/');
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  await page.getByRole('button', { name: 'Ajustes', exact: true }).click();
+  await page.locator('#quality').selectOption('low');
+  await page.getByRole('button', { name: 'Listo', exact: true }).click();
+  const lowWidth = await page.locator('#world').evaluate((canvas: HTMLCanvasElement) => canvas.width);
+  await page.getByRole('button', { name: /Valle del Río/ }).click();
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  await page.getByRole('button', { name: 'Ajustes', exact: true }).click();
+  await page.locator('#quality').selectOption('high');
+  await page.getByRole('button', { name: 'Listo', exact: true }).click();
+  await expect.poll(() => page.locator('#world').evaluate((canvas: HTMLCanvasElement) => canvas.width)).toBeGreaterThan(lowWidth);
+  await page.screenshot({ path: testInfo.outputPath('photographic-preview.png') });
+  for (const asset of ['road-grain', 'meadow-summer', 'surface-field', 'sky', 'pine-tree']) {
+    expect(requested.filter(url => url.endsWith(`/${asset}.webp`))).toHaveLength(1);
+  }
+  expect(errors).toEqual([]);
+});
+
+test('route filters, immersive HUD and safe finish keep the ride intact', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  await page.getByRole('button', { name: 'Con subida', exact: true }).click();
+  await expect(page.locator('.route-card').filter({ hasText: 'Óvalo del Prado' })).toHaveCount(0);
+  await expect(page.locator('.route-card').filter({ hasText: 'Puerto de la Ermita' })).toBeVisible();
+  await page.getByRole('button', { name: 'Todas', exact: true }).click();
+  await expect(page.locator('.route-card')).toHaveCount(6);
+  await page.getByRole('button', { name: 'Probar la ruta' }).click();
+  await expect(page.locator('#cadence')).toHaveText('80', { timeout: 15000 });
+  await page.getByRole('button', { name: 'Ocultar datos secundarios' }).click();
+  await expect(page.locator('#distance')).toBeHidden();
+  await expect(page.locator('#speed')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Subir marcha' })).toBeVisible();
+  await page.getByRole('button', { name: 'Mostrar datos secundarios' }).click();
+  await expect(page.locator('#distance')).toBeVisible();
+  await page.locator('.ride-tools summary').click();
+  await page.getByRole('slider', { name: 'Cadencia demo', exact: true }).press('End');
+  await expect(page.locator('#cadence')).toHaveText('140', { timeout: 15000 });
+  await page.getByRole('button', { name: 'Terminar', exact: true }).click();
+  await expect(page.locator('#dialog')).toContainText('¿Guardamos esta salida?');
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  const elapsed = await page.locator('#elapsed').innerText();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#pause-cover')).toBeVisible();
+  await expect(page.locator('#pause-cover [data-action=pause]')).toBeFocused();
+  await page.waitForTimeout(1100);
+  await expect(page.locator('#elapsed')).toHaveText(elapsed);
+  await page.getByRole('button', { name: 'Ajustes de la experiencia' }).click();
+  await page.getByRole('switch', { name: /Balanceo al pedalear/ }).uncheck();
+  await page.getByRole('button', { name: 'Listo', exact: true }).click();
+  await expect(page.locator('#pause-cover [data-action=settings]')).toBeFocused();
+  await page.getByRole('button', { name: 'Seguir rodando', exact: true }).click();
+  await expect(page.locator('#pause-cover')).toBeHidden();
+  await page.getByRole('button', { name: 'Terminar', exact: true }).click();
+  await page.getByRole('button', { name: 'Guardar salida', exact: false }).click();
+  await page.getByRole('button', { name: 'Volver al camino', exact: false }).click();
+  await page.getByRole('button', { name: 'Mis salidas', exact: true }).click();
+  await expect(page.locator('.history-row')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Con sensor', exact: true }).click();
+  await expect(page.locator('.history-row')).toHaveCount(0);
+  await expect(page.locator('.empty-state')).toContainText('Todavía no hay salidas');
+  await page.getByRole('button', { name: 'Demo', exact: true }).click();
+  await expect(page.locator('.history-row')).toHaveCount(1);
+  await page.locator('.history-row').click();
+  await expect(page.locator('#dialog')).toContainText('Detalle de la salida');
+  await page.getByRole('button', { name: 'Todas las salidas', exact: false }).click();
+  await expect(page.locator('.history-row')).toHaveCount(1);
+});
+
+test('short landscape screen keeps essential controls separate and keyboard pause contained', async ({ page }) => {
+  await page.setViewportSize({ width: 667, height: 375 });
+  await page.goto('/');
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  await page.getByRole('button', { name: 'Probar la ruta' }).click();
+  await expect(page.locator('.hud')).toBeVisible();
+  const rectangles = await page.evaluate(() => {
+    const selectors = ['.hud', '.ride-header-actions', '.ride-controls'];
+    return selectors.map(s => { const r = document.querySelector(s)!.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; });
+  });
+  const [hud, actions, controls] = rectangles;
+  expect(hud.right).toBeLessThanOrEqual(actions.left);
+  expect(hud.bottom).toBeLessThan(controls.top);
+  expect(controls.bottom).toBeLessThanOrEqual(375);
+  await page.getByRole('button', { name: 'Pausar', exact: true }).click();
+  const first = page.locator('#pause-cover [data-action=pause]');
+  await expect(first).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(page.locator('#pause-cover [data-action=finish]')).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(first).toBeFocused();
+  expect(await page.locator('.ride-controls').evaluate((el: HTMLElement) => el.inert)).toBe(true);
+});
