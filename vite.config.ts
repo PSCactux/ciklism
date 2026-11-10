@@ -7,7 +7,21 @@ export default defineConfig({
   // Relative base: the same build works at a domain root, under /ciklism/ on GitHub Pages
   // and inside the Capacitor containers.
   base: './',
+  // Pre-bundled dependencies live under their own folder name; see the cache note below.
+  cacheDir: 'node_modules/.vite/megabici',
   plugins: [{ name: 'local-render-diagnostics', configureServer(server) {
+    // Vite serves pre-bundled dependency chunks as immutable for a year, but the chunks import each
+    // other without a version. After a new dependency is bundled, a browser can pair a cached old
+    // chunk with new ones: Babylon then registers its shaders in a second copy of its shader store,
+    // cannot find them and fetches them by URL, which here returns index.html as shader source.
+    // Revalidating every chunk costs a 304 and keeps one consistent set.
+    server.middlewares.use((req, res, next) => {
+      if (req.url?.includes('/node_modules/.vite/')) {
+        const setHeader = res.setHeader.bind(res);
+        res.setHeader = (name, value) => setHeader(name, name.toLowerCase() === 'cache-control' ? 'no-cache' : value);
+      }
+      next();
+    });
     const entries: unknown[] = [];
     let writing = Promise.resolve();
     server.ws.on('megabici:render-diagnostic', data => {
