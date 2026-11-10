@@ -90,7 +90,7 @@ describe('road index', () => {
   it('returns exactly what testing every segment would, near and far from the road', () => {
     const files = import.meta.glob<{ nombre: string; puntos: { x: number; y: number; z: number }[] }>('../src/routes/*.json', { eager: true, import: 'default' });
     for (const route of Object.values(files)) {
-      const path = new RoutePath(route), points = route.puntos;
+      const path = new RoutePath(route), points = path.points;
       for (let n = 0; n < 400; n++) {
         const at = path.sample(path.totalLength * ((n * 0.6180339887) % 1)).position;
         const x = at.x + Math.sin(n * 12.9898) * (n % 5 === 0 ? 2400 : 300), z = at.z + Math.cos(n * 78.233) * (n % 7 === 0 ? 2400 : 300);

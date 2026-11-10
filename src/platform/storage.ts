@@ -3,12 +3,12 @@ import { z } from 'zod';
 import { addOutcome, emptyTotals, earned, reward, type Totals } from '../domain/progress';
 import type { Session } from '../domain/session';
 import { emptyRecord, type LapRecord } from '../domain/laps';
-import { emptyBike, sanitizeBike, type BikeSetup } from '../domain/bike';
+import { sanitizeBikes, type Bike } from '../domain/bike';
 import type { RivalLevel } from '../domain/rivals';
 
 interface Profile { totals: Totals; achievements: string[] }
-export interface Settings { calibration: Record<string, number>; motion: boolean; quality: 'auto' | 'high' | 'low'; bike: BikeSetup; rivals: RivalLevel }
-export const defaultSettings = (): Settings => ({ calibration: {}, motion: true, quality: 'auto', bike: emptyBike(), rivals: 'even' });
+export interface Settings { calibration: Record<string, number>; motion: boolean; quality: 'auto' | 'high' | 'low'; bikes: Bike[]; activeBike: string; rivals: RivalLevel }
+export const defaultSettings = (): Settings => ({ calibration: {}, motion: true, quality: 'auto', bikes: sanitizeBikes(undefined), activeBike: 'bici-1', rivals: 'even' });
 interface MegaBiciDB extends DBSchema {
   sessions: { key: string; value: Session };
   records: { key: string; value: LapRecord };
@@ -17,7 +17,7 @@ interface MegaBiciDB extends DBSchema {
 }
 const n = z.number().finite().nonnegative();
 const sector = z.object({ index: z.number().int().min(0).max(2), seconds: n,
-  delta: z.number().finite().nullable(), best: z.boolean() });
+  delta: z.number().finite().nullable(), best: z.boolean(), sessionBest: z.boolean().optional() });
 const record = z.object({ bestSeconds: n.nullable(), sectors: z.array(n.nullable()).max(3),
   trace: z.array(z.object({ distance: n, seconds: n })).max(10000) });
 const session = z.object({
@@ -31,8 +31,10 @@ const session = z.object({
   place: z.number().int().positive().optional(), riders: z.number().int().positive().optional(),
 });
 // Copies exported before the rename carry the old format name and stay importable.
+const bike = z.object({ id: z.string().min(1).max(60), name: z.string().max(30), routeLevels: z.boolean(),
+  levels: z.array(z.object({ metersPerRev: z.number().finite().positive() })).max(32) });
 export const backupSchema = z.object({ format: z.enum(['megabici', 'ciklism']), version: z.literal(1),
-  sessions: z.array(session).max(10000),
+  sessions: z.array(session).max(10000), bikes: z.array(bike).max(20).optional(),
 });
 export function parseBackup(text: string): Session[] {
   if (text.length > 50 * 1024 * 1024) throw new Error('El archivo supera los 50 MB.');
@@ -60,8 +62,9 @@ export class SessionStore {
     return (await (await this.db).get('meta', 'profile') as Profile | undefined) ?? { totals: emptyTotals(), achievements: [] };
   }
   async settings(): Promise<Settings> {
-    const stored = await (await this.db).get('meta', 'settings') as Partial<Settings> | undefined;
-    return { ...defaultSettings(), ...stored, bike: sanitizeBike(stored?.bike) };
+    const stored = await (await this.db).get('meta', 'settings') as Partial<Settings> & { bike?: unknown } | undefined;
+    const { bike, ...rest } = stored ?? {}, bikes = sanitizeBikes(stored?.bikes, bike);
+    return { ...defaultSettings(), ...rest, bikes, activeBike: bikes.find(b => b.id === stored?.activeBike)?.id ?? bikes[0].id };
   }
   async saveSettings(settings: Settings) { await (await this.db).put('meta', settings, 'settings'); }
   async sessions() { return (await (await this.db).getAll('sessions')).sort((a, b) => b.startedAt - a.startedAt); }
@@ -90,7 +93,9 @@ export class SessionStore {
     await tx.done;
     return s;
   }
-  async export() { return JSON.stringify({ format: 'megabici', version: 1, sessions: await this.sessions() }, null, 2); }
+  async export() {
+    return JSON.stringify({ format: 'megabici', version: 1, sessions: await this.sessions(), bikes: (await this.settings()).bikes }, null, 2);
+  }
   async checkpoint(session: Session) { await (await this.db).put('recovery', session, 'active'); }
   async clearCheckpoint() { await (await this.db).delete('recovery', 'active'); }
   async recover() {
@@ -106,6 +111,10 @@ export class SessionStore {
       if (await (await this.db).get('sessions', s.id)) continue;
       await this.save({ ...s, xp: 0, achievements: [] }); count++;
     }
+    // Bikes travel with the copy; one already on this device keeps its own calibration.
+    const bikes = backupSchema.parse(JSON.parse(text)).bikes ?? [], settings = await this.settings();
+    const added = bikes.filter(b => !settings.bikes.some(own => own.id === b.id));
+    if (added.length) await this.saveSettings({ ...settings, bikes: sanitizeBikes([...settings.bikes, ...added]) });
     return count;
   }
 }

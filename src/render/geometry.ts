@@ -1,4 +1,4 @@
-import { RoutePath, type Vec3 } from '../domain/route';
+import { roadLine, RoutePath, type Vec3 } from '../domain/route';
 import { landscape, lakeFor, lakeRadius, riverProfile } from './scenery';
 
 export interface Geometry { positions: number[]; indices: number[]; uvs: number[]; colors: number[]; normals?: number[] }
@@ -115,7 +115,7 @@ function nearSegments(points: Vec3[], x: number, z: number) {
 /** A single height field avoids overlapping terrain ribbons covering other legs of a circuit. */
 export function groundAt(path: RoutePath, x: number, z: number) {
   let closest = Infinity, altitude = 0, lateral = 0, along = 0;
-  const points = path.route.puntos, { segments, travelled } = nearSegments(points, x, z);
+  const points = roadLine(path.route), { segments, travelled } = nearSegments(points, x, z);
   for (const i of segments) {
     const a = points[i - 1], b = points[i];
     const dx = b.x - a.x, dz = b.z - a.z;

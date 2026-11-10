@@ -1,326 +1,326 @@
 {
-  "071becdf": {
-    "route": "ovalo",
-    "daylight": "dia",
-    "file": "071becdf.webp",
-    "x": -510,
-    "z": -420,
-    "width": 1020,
-    "depth": 840,
-    "pixelsX": 2048,
-    "pixelsZ": 2048,
-    "bytes": 21208
-  },
-  "f5edd9d4": {
-    "route": "ovalo",
-    "daylight": "amanecer",
-    "file": "f5edd9d4.webp",
-    "x": -510,
-    "z": -420,
-    "width": 1020,
-    "depth": 840,
-    "pixelsX": 2048,
-    "pixelsZ": 2048,
-    "bytes": 43640
-  },
-  "b4773a3c": {
-    "route": "ovalo",
-    "daylight": "atardecer",
-    "file": "b4773a3c.webp",
-    "x": -510,
-    "z": -420,
-    "width": 1020,
-    "depth": 840,
-    "pixelsX": 2048,
-    "pixelsZ": 2048,
-    "bytes": 47010
-  },
-  "f0646c17": {
-    "route": "ruta_inicial",
-    "daylight": "dia",
-    "file": "f0646c17.webp",
-    "x": -477,
-    "z": -320,
-    "width": 1926,
-    "depth": 1832,
-    "pixelsX": 2048,
-    "pixelsZ": 2048,
-    "bytes": 49152
-  },
-  "8a9a2982": {
-    "route": "ruta_inicial",
-    "daylight": "amanecer",
-    "file": "8a9a2982.webp",
-    "x": -477,
-    "z": -320,
-    "width": 1926,
-    "depth": 1832,
-    "pixelsX": 2048,
-    "pixelsZ": 2048,
-    "bytes": 113416
-  },
-  "6d60b16a": {
-    "route": "ruta_inicial",
-    "daylight": "atardecer",
-    "file": "6d60b16a.webp",
-    "x": -477,
-    "z": -320,
-    "width": 1926,
-    "depth": 1832,
-    "pixelsX": 2048,
-    "pixelsZ": 2048,
-    "bytes": 136706
-  },
-  "e8627f82": {
-    "route": "valle",
-    "daylight": "dia",
-    "file": "e8627f82.webp",
-    "x": -540,
-    "z": -2130,
-    "width": 10178,
-    "depth": 4255,
-    "pixelsX": 2048,
-    "pixelsZ": 1024,
-    "bytes": 205952
-  },
-  "8c42eb2d": {
-    "route": "valle",
-    "daylight": "amanecer",
-    "file": "8c42eb2d.webp",
-    "x": -540,
-    "z": -2130,
-    "width": 10178,
-    "depth": 4255,
-    "pixelsX": 2048,
-    "pixelsZ": 1024,
-    "bytes": 208950
-  },
-  "35f8e095": {
-    "route": "valle",
-    "daylight": "atardecer",
-    "file": "35f8e095.webp",
-    "x": -540,
-    "z": -2130,
-    "width": 10178,
-    "depth": 4255,
-    "pixelsX": 2048,
-    "pixelsZ": 1024,
-    "bytes": 207596
-  },
-  "b6549467": {
+  "47007534": {
     "route": "puerto",
     "daylight": "dia",
-    "file": "b6549467.webp",
+    "file": "47007534.webp",
     "x": -320,
     "z": -2739,
     "width": 18021,
     "depth": 5474,
     "pixelsX": 2048,
     "pixelsZ": 1024,
-    "bytes": 8964
+    "bytes": 6864
   },
-  "1d83102a": {
+  "800618a6": {
+    "route": "ovalo",
+    "daylight": "dia",
+    "file": "800618a6.webp",
+    "x": -510,
+    "z": -420,
+    "width": 1020,
+    "depth": 840,
+    "pixelsX": 2048,
+    "pixelsZ": 2048,
+    "bytes": 26468
+  },
+  "0bcd59c3": {
+    "route": "ovalo",
+    "daylight": "amanecer",
+    "file": "0bcd59c3.webp",
+    "x": -510,
+    "z": -420,
+    "width": 1020,
+    "depth": 840,
+    "pixelsX": 2048,
+    "pixelsZ": 2048,
+    "bytes": 57138
+  },
+  "24f3497f": {
+    "route": "ovalo",
+    "daylight": "atardecer",
+    "file": "24f3497f.webp",
+    "x": -510,
+    "z": -420,
+    "width": 1020,
+    "depth": 840,
+    "pixelsX": 2048,
+    "pixelsZ": 2048,
+    "bytes": 62028
+  },
+  "1d91b688": {
+    "route": "ruta_inicial",
+    "daylight": "dia",
+    "file": "1d91b688.webp",
+    "x": -477,
+    "z": -320,
+    "width": 1926,
+    "depth": 1832,
+    "pixelsX": 2048,
+    "pixelsZ": 2048,
+    "bytes": 64226
+  },
+  "4f757183": {
+    "route": "ruta_inicial",
+    "daylight": "amanecer",
+    "file": "4f757183.webp",
+    "x": -477,
+    "z": -320,
+    "width": 1926,
+    "depth": 1832,
+    "pixelsX": 2048,
+    "pixelsZ": 2048,
+    "bytes": 151126
+  },
+  "0d97ee1f": {
+    "route": "ruta_inicial",
+    "daylight": "atardecer",
+    "file": "0d97ee1f.webp",
+    "x": -477,
+    "z": -320,
+    "width": 1926,
+    "depth": 1832,
+    "pixelsX": 2048,
+    "pixelsZ": 2048,
+    "bytes": 185210
+  },
+  "a2c73d8d": {
+    "route": "valle",
+    "daylight": "dia",
+    "file": "a2c73d8d.webp",
+    "x": -540,
+    "z": -2130,
+    "width": 10178,
+    "depth": 4255,
+    "pixelsX": 2048,
+    "pixelsZ": 1024,
+    "bytes": 241518
+  },
+  "4dfbdfd8": {
+    "route": "valle",
+    "daylight": "amanecer",
+    "file": "4dfbdfd8.webp",
+    "x": -540,
+    "z": -2130,
+    "width": 10178,
+    "depth": 4255,
+    "pixelsX": 2048,
+    "pixelsZ": 1024,
+    "bytes": 294434
+  },
+  "249f4b74": {
+    "route": "valle",
+    "daylight": "atardecer",
+    "file": "249f4b74.webp",
+    "x": -540,
+    "z": -2130,
+    "width": 10178,
+    "depth": 4255,
+    "pixelsX": 2048,
+    "pixelsZ": 1024,
+    "bytes": 292600
+  },
+  "88ceba4b": {
     "route": "puerto",
     "daylight": "amanecer",
-    "file": "1d83102a.webp",
+    "file": "88ceba4b.webp",
     "x": -320,
     "z": -2739,
     "width": 18021,
     "depth": 5474,
     "pixelsX": 2048,
     "pixelsZ": 1024,
-    "bytes": 10650
+    "bytes": 10072
   },
-  "e4f89a06": {
+  "98b62dc3": {
     "route": "puerto",
     "daylight": "atardecer",
-    "file": "e4f89a06.webp",
+    "file": "98b62dc3.webp",
     "x": -320,
     "z": -2739,
     "width": 18021,
     "depth": 5474,
     "pixelsX": 2048,
     "pixelsZ": 1024,
-    "bytes": 10952
+    "bytes": 11190
   },
-  "4d2ddc93": {
+  "f2e1f97c": {
     "route": "embalse",
     "daylight": "dia",
-    "file": "4d2ddc93.webp",
+    "file": "f2e1f97c.webp",
     "x": -2245,
     "z": -1512,
     "width": 3535,
     "depth": 2807,
     "pixelsX": 2048,
     "pixelsZ": 2048,
-    "bytes": 33734
+    "bytes": 38692
   },
-  "2b7838be": {
+  "8c7e74b3": {
     "route": "embalse",
     "daylight": "amanecer",
-    "file": "2b7838be.webp",
+    "file": "8c7e74b3.webp",
     "x": -2245,
     "z": -1512,
     "width": 3535,
     "depth": 2807,
     "pixelsX": 2048,
     "pixelsZ": 2048,
-    "bytes": 71290
+    "bytes": 92494
   },
-  "5e7acef6": {
+  "0ca5e167": {
     "route": "embalse",
     "daylight": "atardecer",
-    "file": "5e7acef6.webp",
+    "file": "0ca5e167.webp",
     "x": -2245,
     "z": -1512,
     "width": 3535,
     "depth": 2807,
     "pixelsX": 2048,
     "pixelsZ": 2048,
-    "bytes": 80312
+    "bytes": 104104
   },
-  "8de390ef": {
+  "cc22db50": {
     "route": "ermita",
     "daylight": "dia",
-    "file": "8de390ef.webp",
+    "file": "cc22db50.webp",
     "x": -5035,
     "z": -2180,
     "width": 6335,
     "depth": 4360,
     "pixelsX": 2048,
     "pixelsZ": 2048,
-    "bytes": 40568
+    "bytes": 41316
   },
-  "a8ac9e40": {
+  "58c90799": {
     "route": "ermita",
     "daylight": "amanecer",
-    "file": "a8ac9e40.webp",
+    "file": "58c90799.webp",
     "x": -5035,
     "z": -2180,
     "width": 6335,
     "depth": 4360,
     "pixelsX": 2048,
     "pixelsZ": 2048,
-    "bytes": 80996
+    "bytes": 108090
   },
-  "81c8f7ec": {
+  "b52073e9": {
     "route": "ermita",
     "daylight": "atardecer",
-    "file": "81c8f7ec.webp",
+    "file": "b52073e9.webp",
     "x": -5035,
     "z": -2180,
     "width": 6335,
     "depth": 4360,
     "pixelsX": 2048,
     "pixelsZ": 2048,
-    "bytes": 68484
+    "bytes": 87928
   },
-  "e9a735a6": {
+  "e0a2da7e": {
     "route": "gran_vuelta",
     "daylight": "dia",
-    "file": "e9a735a6.webp",
-    "x": -4965,
-    "z": -320,
-    "width": 9670,
-    "depth": 10770,
+    "file": "e0a2da7e.webp",
+    "x": -4869,
+    "z": -324,
+    "width": 9505,
+    "depth": 10584,
     "pixelsX": 2048,
     "pixelsZ": 2048,
-    "bytes": 35104
+    "bytes": 36414
   },
-  "b2e466f7": {
+  "553e6955": {
     "route": "gran_vuelta",
     "daylight": "amanecer",
-    "file": "b2e466f7.webp",
-    "x": -4965,
-    "z": -320,
-    "width": 9670,
-    "depth": 10770,
+    "file": "553e6955.webp",
+    "x": -4869,
+    "z": -324,
+    "width": 9505,
+    "depth": 10584,
     "pixelsX": 2048,
     "pixelsZ": 2048,
-    "bytes": 71898
+    "bytes": 73276
   },
-  "6e4e741f": {
+  "413a4b99": {
     "route": "gran_vuelta",
     "daylight": "atardecer",
-    "file": "6e4e741f.webp",
-    "x": -4965,
-    "z": -320,
-    "width": 9670,
-    "depth": 10770,
+    "file": "413a4b99.webp",
+    "x": -4869,
+    "z": -324,
+    "width": 9505,
+    "depth": 10584,
     "pixelsX": 2048,
     "pixelsZ": 2048,
-    "bytes": 81386
+    "bytes": 83256
   },
-  "689be0e2": {
+  "4cea4894": {
     "route": "valle_largo",
     "daylight": "dia",
-    "file": "689be0e2.webp",
+    "file": "4cea4894.webp",
     "x": -540,
     "z": -540,
-    "width": 21347,
-    "depth": 34981,
+    "width": 20898,
+    "depth": 34239,
     "pixelsX": 2048,
     "pixelsZ": 2048,
-    "bytes": 116772
+    "bytes": 119544
   },
-  "18a99ffb": {
+  "5a8e322d": {
     "route": "valle_largo",
     "daylight": "amanecer",
-    "file": "18a99ffb.webp",
+    "file": "5a8e322d.webp",
     "x": -540,
     "z": -540,
-    "width": 21347,
-    "depth": 34981,
+    "width": 20898,
+    "depth": 34239,
     "pixelsX": 2048,
     "pixelsZ": 2048,
-    "bytes": 140958
+    "bytes": 146340
   },
-  "32ac388b": {
+  "6fcee355": {
     "route": "valle_largo",
     "daylight": "atardecer",
-    "file": "32ac388b.webp",
+    "file": "6fcee355.webp",
     "x": -540,
     "z": -540,
-    "width": 21347,
-    "depth": 34981,
+    "width": 20898,
+    "depth": 34239,
     "pixelsX": 2048,
     "pixelsZ": 2048,
-    "bytes": 139994
+    "bytes": 145318
   },
-  "4f69c7b0": {
+  "b11034e6": {
     "route": "gran_fondo",
     "daylight": "dia",
-    "file": "4f69c7b0.webp",
-    "x": -21686,
+    "file": "b11034e6.webp",
+    "x": -20750,
     "z": -320,
-    "width": 22444,
-    "depth": 48714,
+    "width": 21569,
+    "depth": 46599,
     "pixelsX": 1024,
     "pixelsZ": 2048,
-    "bytes": 4376
+    "bytes": 4416
   },
-  "8641f343": {
+  "f22910a3": {
     "route": "gran_fondo",
     "daylight": "amanecer",
-    "file": "8641f343.webp",
-    "x": -21686,
+    "file": "f22910a3.webp",
+    "x": -20750,
     "z": -320,
-    "width": 22444,
-    "depth": 48714,
+    "width": 21569,
+    "depth": 46599,
     "pixelsX": 1024,
     "pixelsZ": 2048,
-    "bytes": 5286
+    "bytes": 5466
   },
-  "f273206f": {
+  "142e092b": {
     "route": "gran_fondo",
     "daylight": "atardecer",
-    "file": "f273206f.webp",
-    "x": -21686,
+    "file": "142e092b.webp",
+    "x": -20750,
     "z": -320,
-    "width": 22444,
-    "depth": 48714,
+    "width": 21569,
+    "depth": 46599,
     "pixelsX": 1024,
     "pixelsZ": 2048,
-    "bytes": 5356
+    "bytes": 5634
   }
 }

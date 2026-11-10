@@ -421,15 +421,19 @@ dialog[data-view=calibration] { width: min(720px,calc(100% - 40px)); }
 .cal-level .secondary { min-height: 40px; padding: 8px 12px; font-size: 11px; }
 .cal-level .icon-button { background: #eaf0e2; color: #4d6545; border-color: transparent; }
 #cal-levels .text-button { margin-top: 14px; }
-.level-cue { align-self: center; margin: auto 0 10px; padding: 10px 18px; border-radius: 10px; background: var(--lime); color: var(--green); font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px #0000002e; }
-.level-cue:not([hidden]) + .ride-controls { margin-top: 0; }
+.ride-cue { align-self: center; margin: auto 0 10px; padding: 10px 18px; border-radius: 10px; background: #14251ef2; border: 1px solid #ffffff2e; color: #f5f9ec; font-size: 14px; font-weight: 600; text-align: center; box-shadow: 0 6px 20px #0000002e; }
+.ride-cue[data-tone=level] { background: var(--lime); border-color: transparent; color: var(--green); }
+.ride-cue[data-tone=record] { background: #8a4fd0; border-color: transparent; color: #fff; }
+.ride-cue[data-tone=session],.ride-cue[data-tone=up] { background: #2f9a52; border-color: transparent; color: #fff; }
+.ride-cue[data-tone=slower],.ride-cue[data-tone=down] { background: #e08a2c; border-color: transparent; color: #26190a; }
+.ride-cue:not([hidden]) + .ride-controls { margin-top: 0; }
 .ride-calibration output { min-width: 132px; text-align: center; font-size: 13px; font-weight: 600; color: var(--lime); font-variant-numeric: tabular-nums; }
 @media(max-width:760px) {
   .cal-status { flex-wrap: wrap; }.cal-status .secondary { width: 100%; }
   .cal-stats strong { font-size: 25px; }
   .cal-measure .primary { width: 100%; margin-left: 0; }
   .cal-level { gap: 8px; }.cal-level strong { font-size: 12px; }.cal-level .secondary { padding: 8px 9px; }
-  .level-cue { font-size: 13px; }
+  .ride-cue { font-size: 13px; padding: 9px 14px; }
 }
 @media(max-width:760px) {
   .brand { font-size: 23px; letter-spacing: -1.2px; gap: 6px; }.brand svg { width: 27px; height: 27px; }
@@ -453,3 +457,26 @@ dialog[data-view=calibration] { width: min(720px,calc(100% - 40px)); }
   .standing-gap { font-size: 10px; padding-top: 5px; }.standing-gap small { font-size: 7px; }
 }
 @media(max-height:550px) and (orientation:landscape) { .standings { padding: 7px 9px; gap: 4px; }.standing-place strong { font-size: 20px; }.standing-gap small { display: none; }.standing-gap { padding-top: 4px; font-size: 10px; } }
+/* Riding map: sectors take the colour of their time; the rider, the rivals and the finish are marked. */
+.ride-map .map-sector { stroke: currentColor; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; opacity: .5; }
+.ride-map .map-sector[data-current] { opacity: 1; }
+.ride-map .map-sector[data-result] { opacity: 1; stroke-width: 3.6; }
+.ride-map .map-sector[data-result=record] { stroke: #c08cff; }
+.ride-map .map-sector[data-result=session] { stroke: #62d67c; }
+.ride-map .map-sector[data-result=slower] { stroke: #ffa245; }
+.ride-map .map-split { fill: #14251e; stroke: #e8f2d8; stroke-width: 1.2; }
+.ride-map .map-start { fill: #14251e; stroke: #e8f2d8; stroke-width: 1.5; }
+.ride-map .map-finish { fill: #fff; stroke: #14251e; stroke-width: 2; }
+.ride-map .map-rival { stroke: #14251e; stroke-width: .8; }
+.ride-map .map-you { fill: var(--lime); stroke: #14251e; stroke-width: 2.2; }
+.elevation .climb { fill: #ffb45a59; }
+#stretch { color: #ffd08f; white-space: nowrap; }
+/* Saved bikes in the calibration dialog. */
+.bike-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.bike-tabs button { min-height: 40px; padding: 8px 14px; border: 1px solid #cdd8c6; border-radius: 9px; background: #f3f6ed; font-size: 12px; font-weight: 600; }
+.bike-tabs button[aria-pressed=true] { background: var(--green); border-color: var(--green); color: #fff; }
+.bike-tabs .bike-add { border-style: dashed; color: #55704a; background: none; }
+.bike-edit { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; font-size: 12px; }
+.bike-edit label { font-weight: 600; }
+.bike-edit input { flex: 1; min-width: 140px; min-height: 42px; padding: 8px 12px; border: 1px solid #ced8c6; border-radius: 9px; background: #fff; color: var(--ink); font: inherit; }
+.bike-edit .text-button { margin: 0; text-decoration: underline; }

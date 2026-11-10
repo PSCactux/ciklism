@@ -6,7 +6,10 @@ export interface BikeLevel { metersPerRev: number }
 export interface BikeSetup { levels: BikeLevel[]; routeLevels: boolean }
 export const MAX_LEVELS = 32;
 export const DEFAULT_RATIO = 5.6;
+/** A saved bike: riders with more than one keep a calibration for each. */
+export interface Bike extends BikeSetup { id: string; name: string }
 export const emptyBike = (): BikeSetup => ({ levels: [], routeLevels: true });
+export const newBike = (name: string): Bike => ({ id: `bici-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`, name, ...emptyBike() });
 export const speedKmh = (metersPerRev: number, rpm: number) => rpm / 60 * metersPerRev * 3.6;
 /** Ratio that makes the app show the speed read on the bike's own display at this cadence. */
 export function ratioFor(kmh: number, rpm: number): number | null {
@@ -19,6 +22,14 @@ export function sanitizeBike(value: unknown): BikeSetup {
   const levels = Array.isArray(bike?.levels) ? bike.levels.filter(l => Number.isFinite(l?.metersPerRev) && l.metersPerRev > 0)
     .slice(0, MAX_LEVELS).map(l => ({ metersPerRev: l.metersPerRev })) : [];
   return { levels, routeLevels: bike?.routeLevels !== false };
+}
+
+/** Stored bikes, repaired if needed. A calibration saved before bikes had names becomes the first one. */
+export function sanitizeBikes(value: unknown, legacy?: unknown): Bike[] {
+  const stored = Array.isArray(value) ? value.filter(b => typeof b?.id === 'string' && b.id) : [];
+  const bikes = stored.slice(0, 20).map((b, i) => ({ id: String(b.id).slice(0, 60),
+    name: (typeof b.name === 'string' && b.name.trim() ? b.name.trim() : `Bici ${i + 1}`).slice(0, 30), ...sanitizeBike(b) }));
+  return bikes.length ? bikes : [{ id: 'bici-1', name: 'Mi bici', ...sanitizeBike(legacy) }];
 }
 
 export type Signal = 'off' | 'waiting' | 'good';

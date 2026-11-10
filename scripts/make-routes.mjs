@@ -2,7 +2,8 @@
 // After changing a course here, regenerate its lighting with `npm run bake:lighting`.
 import { writeFile } from 'node:fs/promises';
 
-const SEGMENT = 500;
+// Short segments let the road bend properly; the app rounds every vertex into a curve.
+const SEGMENT = 100;
 const round = n => Math.round(n * 1000) / 1000;
 const wave = (terms, s) => terms.reduce((sum, [amplitude, period, phase]) => sum + amplitude * Math.sin(s / period + phase), 0);
 function measure(points) {
@@ -53,13 +54,13 @@ function loop({ km, shape, altitude }) {
 
 const routes = {
   gran_vuelta: { nombre: 'Gran Vuelta de las Colinas', scenery: 'chapel',
-    puntos: loop({ km: 30, shape: [[0.13, 2, 0.6], [0.08, 3, 2.1], [0.035, 5, 4.0]],
+    puntos: loop({ km: 30, shape: [[0.13, 2, 0.6], [0.08, 3, 2.1], [0.035, 5, 4.0], [0.0075, 41, 1.3], [0.003, 67, 0.2]],
       altitude: angle => 110 + 62 * Math.sin(angle - 0.9) + 48 * Math.sin(angle * 3 + 0.5) + 18 * Math.sin(angle * 7 + 2.2) }) },
   valle_largo: { nombre: 'Travesía del Valle Largo', scenery: 'river',
-    puntos: journey({ km: 45, bearing: 0.5, sway: [[0.7, 3300, 0.4], [0.16, 1250, 2.6]],
+    puntos: journey({ km: 45, bearing: 0.5, sway: [[0.7, 3300, 0.4], [0.16, 1250, 2.6], [0.3, 150, 1.0]],
       altitude: s => 20 + s * 0.0031 + 26 * Math.sin(s / 2900 + 1.1) + 9 * Math.sin(s / 870 + 0.3) }) },
   gran_fondo: { nombre: 'Gran Fondo de la Sierra', scenery: 'alpine',
-    puntos: journey({ km: 60, bearing: -0.35, sway: [[0.72, 3500, 2.2], [0.15, 1400, 0.9]],
+    puntos: journey({ km: 60, bearing: -0.35, sway: [[0.72, 3500, 2.2], [0.15, 1400, 0.9], [0.42, 115, 0.3]],
       altitude: s => 130 + s * 0.0052 + 150 * Math.sin(s / 4100 - 1.2) + 46 * Math.sin(s / 1500 + 0.7) + 14 * Math.sin(s / 620 + 2.9) }) },
 };
 for (const [id, route] of Object.entries(routes)) {

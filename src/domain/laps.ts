@@ -1,7 +1,8 @@
 import { clamp } from './route';
 
 export interface TracePoint { distance: number; seconds: number }
-export interface Sector { index: number; seconds: number; delta: number | null; best: boolean }
+/** `best` beats the all-time record; `sessionBest` is the quickest of this ride so far. */
+export interface Sector { index: number; seconds: number; delta: number | null; best: boolean; sessionBest?: boolean }
 export interface Lap { number: number; seconds: number; record: boolean; sectors: Sector[] }
 export interface LapRecord { bestSeconds: number | null; sectors: (number | null)[]; trace: TracePoint[] }
 export const emptyRecord = (): LapRecord => ({ bestSeconds: null, sectors: [null, null, null], trace: [] });
@@ -27,6 +28,8 @@ export class LapTimer {
   private nextSplit = 25;
   private sectorStarted = 0;
   private best: LapRecord;
+  private session: (number | null)[] = [null, null, null];
+  onSector: (sector: Sector) => void = () => {};
 
   constructor(readonly length: number, record: LapRecord = emptyRecord()) {
     this.best = structuredClone(record);
@@ -45,8 +48,12 @@ export class LapTimer {
       const duration = end - this.sectorStarted;
       const previous = this.best.sectors[index] ?? null;
       const best = previous === null || duration < previous;
-      this.sectors.push({ index, seconds: duration, delta: previous === null ? null : duration - previous, best });
+      const quickest = this.session[index], sessionBest = quickest === null || duration < quickest;
+      if (sessionBest) this.session[index] = duration;
+      const sector = { index, seconds: duration, delta: previous === null ? null : duration - previous, best, sessionBest };
+      this.sectors.push(sector);
       if (best) this.best.sectors[index] = duration;
+      this.onSector(sector);
       this.sectorStarted = end;
     }
     this.previous = { distance, seconds };

@@ -1,6 +1,7 @@
 import { icons } from './icons';
 import { number } from './format';
-import { DEFAULT_RATIO, MAX_LEVELS, speedKmh, type BikeSetup, type Signal } from '../domain/bike';
+import { DEFAULT_RATIO, MAX_LEVELS, speedKmh, type Bike, type BikeSetup, type Signal } from '../domain/bike';
+import { escape as esc } from './format';
 
 export interface CalibrationLive {
   signal: Signal; status: string; detail: string; canConnect: boolean;
@@ -18,8 +19,11 @@ export function levelsList(bike: BikeSetup) {
     ${count ? '<button class="text-button" data-action="cal-clear">Borrar todos los niveles</button>' : ''}`;
 }
 
-export function calibrationView(bike: BikeSetup) {
-  return `<p class="muted">Comprueba que el sensor funciona y haz que la velocidad cuadre con la que marca tu bici. Se guarda en este dispositivo: solo hay que hacerlo una vez.</p>
+export function calibrationView(bikes: readonly Bike[], bike: Bike) {
+  return `<p class="muted">Comprueba que el sensor funciona y haz que la velocidad cuadre con la que marca tu bici. Se guarda en este dispositivo y sigue ahí cuando cierras la app: solo hay que hacerlo una vez por bici.</p>
+    <section class="settings-section"><h3>${icons.bike} Tu bici</h3>
+      <div class="bike-tabs" role="group" aria-label="Bicis guardadas">${bikes.map(b => `<button data-bike="${esc(b.id)}" aria-pressed="${b.id === bike.id}">${esc(b.name)}</button>`).join('')}<button class="bike-add" data-action="bike-add">Añadir bici</button></div>
+      <div class="bike-edit"><label for="bike-name">Nombre</label><input id="bike-name" maxlength="30" autocomplete="off" value="${esc(bike.name)}"/><button class="text-button" data-action="bike-remove" ${bikes.length > 1 ? '' : 'hidden'}>Quitar esta bici</button></div></section>
     <section class="settings-section"><h3>${icons.bluetooth} 1 · Sensor</h3>
       <div class="cal-status"><i class="signal-light" id="cal-light" data-signal="off"></i><div><strong id="cal-status" role="status"></strong><span id="cal-detail"></span></div><button class="secondary" id="cal-connect" data-action="connect">Conectar sensor</button></div>
       <div class="cal-stats"><div><small>CADENCIA</small><strong id="cal-cadence">0</strong><span>rpm</span></div><div><small>PEDALADAS</small><strong id="cal-turns">0</strong><button class="text-button" data-action="cal-zero">Poner a cero</button></div><div><small>ÚLTIMA SEÑAL</small><strong id="cal-last">—</strong><span id="cal-last-unit"></span></div></div>

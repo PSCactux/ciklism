@@ -67,7 +67,7 @@ export function lightmapUV(route: Route, positions: number[]) {
 }
 /** Version the recipe as well as inputs so a stale bake cannot silently match a route. */
 export function lightingKey(route: Route, daylight: Daylight) {
-  const recipe = JSON.stringify({ version: route.scenery === 'river' ? 6 : 4, route, light: LIGHTING[daylight], bounds: lightmapBounds(route) });
+  const recipe = JSON.stringify({ version: route.scenery === 'river' ? 7 : 5, route, light: LIGHTING[daylight], bounds: lightmapBounds(route) });
   let value = 2166136261;
   for (let i = 0; i < recipe.length; i++) value = Math.imul(value ^ recipe.charCodeAt(i), 16777619);
   return (value >>> 0).toString(16).padStart(8, '0');

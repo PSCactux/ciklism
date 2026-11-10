@@ -40,6 +40,9 @@ test('calibration: sensor check, speed matched to the bike and its own levels in
   await expect(dialog).toContainText('Calibra tu bici');
   await expect(dialog.locator('#cal-status')).toHaveText('Sin conectar');
   await expect(dialog.locator('#cal-register')).toBeDisabled();
+  await dialog.locator('#bike-name').fill('Estática del salón');
+  await dialog.locator('#bike-name').blur();
+  await expect(dialog.getByRole('button', { name: 'Estática del salón' })).toHaveAttribute('aria-pressed', 'true');
   await dialog.getByRole('button', { name: 'Conectar sensor' }).click();
   await expect(dialog.locator('#cal-status')).toHaveText('Sensor de prueba · señal correcta');
   await expect(dialog.locator('#cal-cadence')).toHaveText('80');
@@ -60,12 +63,18 @@ test('calibration: sensor check, speed matched to the bike and its own levels in
   await dialog.getByRole('button', { name: 'Quitar el nivel 3' }).click();
   await expect(dialog.locator('.cal-level')).toHaveCount(2);
   await dialog.locator('#route-levels').uncheck();
+  // A second bike starts uncalibrated and does not disturb the first.
+  await dialog.getByRole('button', { name: 'Añadir bici' }).click();
+  await expect(dialog.locator('.cal-level')).toHaveCount(0);
+  await expect(dialog.locator('#bike-name')).toHaveValue('Bici 2');
+  await dialog.getByRole('button', { name: 'Estática del salón' }).click();
+  await expect(dialog.locator('.cal-level')).toHaveCount(2);
   await dialog.getByRole('button', { name: 'Listo', exact: true }).click();
 
   await page.reload();
   await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
   await page.getByRole('button', { name: 'Mi sensor', exact: true }).click();
-  await expect(page.locator('.bike-note')).toHaveText('Bici calibrada · 2 niveles');
+  await expect(page.locator('.bike-note')).toHaveText('Estática del salón · calibrada · 2 niveles');
   await page.locator('#connect').click();
   await expect(page.getByRole('button', { name: 'Empezar a rodar' })).toBeEnabled();
   await page.getByRole('button', { name: 'Empezar a rodar' }).click();

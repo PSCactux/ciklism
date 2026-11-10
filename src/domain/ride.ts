@@ -52,6 +52,11 @@ export class RideEngine {
     this.state = this.snapshot();
   }
   get gearCount() { return this.gears.length; }
+  /** Development aid: place the rider further along the course, as if they had ridden there. */
+  jump(distance: number) {
+    this.distance = this.travelled = clamp(distance, 0, this.path.totalLength - 1);
+    this.previousY = this.path.sample(this.distance).position.y; this.state = this.snapshot();
+  }
   /** Rivals share the ride's clock: they stop when it is paused and when the rider finishes. */
   race(peloton: Peloton) { this.peloton = peloton; this.state = this.snapshot(); }
   setCalibration(factor: number) { if (Number.isFinite(factor)) this.factor = clamp(factor, 0.4, 2.5); }
@@ -96,7 +101,8 @@ export class RideEngine {
       this.previousY = this.path.sample(0).position.y;
       this.distance -= this.path.totalLength;
     }
-    if (this.path.isCircuit) this.timer.mark(this.distance, this.elapsed - this.lapStarted);
+    // Open courses have no laps, but their three sectors are timed and kept as records too.
+    this.timer.mark(this.distance, this.elapsed - this.lapStarted);
     const y = this.path.sample(this.distance).position.y;
     this.climb += Math.max(0, y - this.previousY);
     this.previousY = y;
@@ -136,14 +142,22 @@ export class RideClock {
   }
 }
 
+/** How far a bike leans into a bend at this speed, in radians; positive leans right. */
+export function bendLean(path: RoutePath, distance: number, speedMps: number) {
+  return clamp(Math.atan(speedMps * speedMps * path.curvatureAt(distance) / 9.80665), -0.3, 0.3);
+}
 export function cameraPose(path: RoutePath, state: RideState, motion = true) {
   const effort = motion && state.cadenceRpm > 0 ? clamp(state.powerWatts / 220, 0, 1.6) : 0;
   const right = normalize({ x: state.forward.z, y: 0, z: -state.forward.x });
   const lateral = 0.03 * effort * Math.sin(state.crankAngle);
-  const lean = 1.8 * Math.PI / 180 * effort * Math.sin(state.crankAngle);
+  // The bike leans into the bend and the bars turn with it; the head follows only part of the way.
+  const bend = motion ? bendLean(path, state.distance, state.speedMps) : 0;
+  const steer = motion ? clamp(path.curvatureAt(state.distance) * 14, -0.16, 0.16) : 0;
+  const lean = 1.8 * Math.PI / 180 * effort * Math.sin(state.crankAngle) + bend * 0.45;
   return {
-    eye: add(add(state.position, { x: 0, y: 1.45 - 0.022 * effort * Math.cos(2 * state.crankAngle), z: 0 }), scale(right, lateral)),
-    target: add(path.positionAt(state.distance + 12), { x: 0, y: 1.45, z: 0 }),
+    eye: add(add(state.position, { x: 0, y: 1.45 - 0.022 * effort * Math.cos(2 * state.crankAngle), z: 0 }), scale(right, lateral + bend * 0.35)),
+    target: add(path.positionAt(state.distance + 16), { x: 0, y: 1.45, z: 0 }),
     up: normalize({ x: right.x * Math.sin(lean), y: Math.cos(lean), z: right.z * Math.sin(lean) }),
+    bend, steer,
   };
 }

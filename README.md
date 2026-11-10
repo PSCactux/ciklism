@@ -19,12 +19,15 @@ The interface is in Spanish. Code, comments and docs are in English.
 
 - Nine routes from 1 to 60 km (circuits and point-to-point), each rideable in reverse and at three times of day.
 - Eleven rivals start with you. Their pace follows your own recent rides with a sensor, so there is always a wheel to chase and one to hold off; the HUD shows your place and the nearest gaps.
-- First-person camera with handlebar, crank-driven sway, terrain, forest, river, lake and reservoir.
+- First-person camera with handlebar, crank-driven sway, terrain, forest, river, lake and reservoir. Every corner of a course is rounded, and the bike leans and steers into the bend.
+- A road with things on it: named villages, flocks, hay bales, fences, guard rails on tight bends, wind turbines, birds, wild flowers and distant ranges; a finish arch, sector banners and kilometre boards.
+- Short cues over the road: climbs and summits, villages, places won and lost, sector and lap times, the last kilometre.
 - Bluetooth Cycling Speed and Cadence (CSC) sensors. Browsers use Web Bluetooth; the iOS and Android apps use the native BLE plugin. Includes bounded automatic reconnection and a manual reconnect.
 - Calibration mode: a live sensor check (signal light, cadence, crank-turn counter), speed matched to the bike's own display, and the bike's resistance levels registered one by one. Rides then use those levels instead of the nine built-in gears, and the course can ask for a level as the slope changes.
 - When you stop pedalling, coasting is modelled with gravity, rolling resistance and air drag.
 - A clearly labelled demo mode with a simulated cadence slider. Demo rides never count towards records or XP.
-- Laps, sectors, personal records and a ghost of your best lap across sessions.
+- Laps, sectors, personal records and a ghost of your best lap across sessions. The riding map shows you, the rivals and the finish, and paints each sector purple (record), green (best of the ride) or orange.
+- Several bikes can be saved, each with its own calibration; they travel with the JSON backup.
 - Every route and time of day is available from the first ride. Local history with charts, XP, levels and achievements. Everything is stored in IndexedDB, with JSON export/import that is idempotent on re-import.
 - Auto-pause when the app is hidden. Recovery checkpoints every 15 s, so an unexpected close still saves the ride.
 - Installable PWA that works offline after the first visit.

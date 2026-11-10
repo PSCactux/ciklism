@@ -63,3 +63,25 @@ export function grassTuft(): Geometry {
   }
   return data;
 }
+
+/** Wild flowers by the road: thin stems with small crossed petals in one or two colours. */
+export function flowerClump(colors: [number, number, number][]): Geometry {
+  const data: Geometry = { positions: [], indices: [], uvs: [], colors: [], normals: [] };
+  for (let flower = 0; flower < 18; flower++) {
+    const radius = Math.sqrt(hash(flower, 71)) * 0.75, angle = hash(flower, 72) * Math.PI * 2;
+    const x = Math.cos(angle) * radius, z = Math.sin(angle) * radius, h = 0.22 + hash(flower, 73) * 0.3, s = 0.028 + hash(flower, 74) * 0.022;
+    const [r, g, b] = colors[flower % colors.length];
+    let i = data.positions.length / 3;
+    data.positions.push(x - 0.008, 0, z, x + 0.008, 0, z, x, h, z);
+    data.indices.push(i, i + 1, i + 2);
+    data.colors.push(0.3, 0.42, 0.2, 1, 0.3, 0.42, 0.2, 1, 0.4, 0.52, 0.25, 1);
+    for (const [ax, az] of [[1, 0], [0, 1]]) {
+      i = data.positions.length / 3;
+      data.positions.push(x - ax * s, h - s * 0.3, z - az * s, x + ax * s, h - s * 0.3, z + az * s, x + ax * s, h + s, z + az * s, x - ax * s, h + s, z - az * s);
+      data.indices.push(i, i + 1, i + 2, i, i + 2, i + 3);
+      for (let n = 0; n < 4; n++) data.colors.push(r, g, b, 1);
+    }
+  }
+  for (let n = 0; n < data.positions.length / 3; n++) { data.normals!.push(0, 1, 0); data.uvs.push(0, 0); }
+  return data;
+}

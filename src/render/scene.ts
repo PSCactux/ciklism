@@ -16,13 +16,16 @@ import { surfaceLook } from './surface-look';
 import { AsphaltSurface, GrassSurface, LimestoneSurface, WaterSurface, MeadowSurface, ShoulderSurface } from './surfaces';
 import { createSky } from './sky';
 import { LIGHTING, lightingKey, lightmapUV, surfaceIrradiance, treeLayout, type Daylight } from './lighting';
-import { pineCrown, forestCrown, grassTuft, meadowClump } from './vegetation';
+import { pineCrown, forestCrown, grassTuft, meadowClump, flowerClump } from './vegetation';
 import { AdaptiveResolution, frameLimit, type Quality } from './budget';
-import { createRider, type RiderModel } from './riders';
+import { createRider, riderMaterials, WHEEL_RADIUS, type RiderModel } from './riders';
 import { PELOTON } from '../domain/rivals';
+import { backdrop, bale, bird, board, box, house, label, merged, post, rail, sheep, turbine } from './props';
+import { barriers, bales, flocks, turbines, villages, type Rail, type Spot, type Village } from './places';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
+import type { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import { CreateCylinder } from '@babylonjs/core/Meshes/Builders/cylinderBuilder';
 import { CreateSphere } from '@babylonjs/core/Meshes/Builders/sphereBuilder';
 import { CreateTube } from '@babylonjs/core/Meshes/Builders/tubeBuilder';
@@ -31,7 +34,7 @@ import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import '@babylonjs/core/Meshes/thinInstanceMesh';
 import '@babylonjs/core/Materials/standardMaterial';
 import { RoutePath, type Vec3 } from '../domain/route';
-import { cameraPose, type RideState } from '../domain/ride';
+import { bendLean, cameraPose, type RideState } from '../domain/ride';
 import { distantHill, groundAt, terrainHeightAt, hash, markings, roadSurface, roadRepairs, roadHeight, riverRibbon, roadside, shoulderBanks, terrainCells, terrainStep, terrainTile, TILE_SIZE, type Geometry } from './geometry';
 
 export type { Daylight } from './lighting';
@@ -63,6 +66,9 @@ export class RideScene {
   private waterSurface: WaterSurface | null = null;
   private ghost: TransformNode | null = null;
   private riders: RiderModel[] = [];
+  private rotors: Mesh[] = [];
+  private flock: { node: TransformNode; wings: Mesh[] }[] = [];
+  private gateGroup: TransformNode | null = null;
   private cockpitGroup: TransformNode | null = null;
   private path: RoutePath | null = null;
   private bakingRoute: RoutePath | null = null;
@@ -104,6 +110,7 @@ export class RideScene {
     this.engine = new Engine(canvas, true, { preserveDrawingBuffer: false, stencil: true,
       powerPreference: 'low-power', adaptToDeviceRatio: false });
     this.scene = new Scene(this.engine);
+    if (import.meta.env.DEV) (window as unknown as { megabiciScene: Scene }).megabiciScene = this.scene;
     this.scene.fogMode = Scene.FOGMODE_EXP2;
     this.scene.fogDensity = 0.00125;
     this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
@@ -198,7 +205,7 @@ export class RideScene {
     this.failedTextures.clear();
     const key = lightingKey(path.route, daylight), ridePath = path;
     if (this.loadedKey === key) {
-      this.path = ridePath; this.showPreview(preview); this.resize();
+      this.path = ridePath; this.gates(ridePath); this.showPreview(preview); this.resize();
       await this.prepareVisibleScene();
       this.canvas.dataset.ready = 'true'; return;
     }
@@ -213,6 +220,7 @@ export class RideScene {
     this.waterSurface = null;
     this.zones = []; this.pending = []; this.lastZoneX = Infinity; this.lastZoneZ = Infinity;
     this.content?.dispose(); this.content = null; this.ghost = null; this.riders = [];
+    this.rotors = []; this.flock = []; this.gateGroup = null;
     for (const mat of this.materials) mat.dispose(false, false);
     this.materials = [];
     this.lightmap?.dispose(); this.lightmap = null;
@@ -298,8 +306,14 @@ export class RideScene {
     }
     onProgress('Plantando el paisaje…');
     await new Promise(resolve => setTimeout(resolve, 0));
-    this.trees(path);
+    const towns = villages(path.route);
+    this.trees(path, towns);
     this.verges(path);
+    this.flowers(path);
+    this.life(path, towns);
+    this.gates(ridePath);
+    const range = backdrop(this.scene, path.route.scenery ?? 'meadow', this.scene.fogColor);
+    this.content.onDisposeObservable.add(() => range.dispose());
     this.hills(path, biome.grass);
     this.landmarks(path);
     this.roadFurniture(path);
@@ -488,7 +502,8 @@ export class RideScene {
       }, minRange);
     }
   }
-  private trees(path: RoutePath) {
+  private trees(path: RoutePath, towns: Village[]) {
+    const houses = towns.flatMap(town => town.houses);
     const bark = this.material('bark', '#b6afa0'); bark.diffuseTexture = this.photo('bark_diff', 1);
     const leaves = this.material('pine-needles', '#edf0d1');
     const river = path.route.scenery === 'river';
@@ -502,6 +517,8 @@ export class RideScene {
     leaves.emissiveColor = this.sunlight!.diffuse.scale(0.9);
     const trunks: Matrix[] = [], crowns: Matrix[] = [], alders: Matrix[] = [];
     for (const tree of treeLayout(path.route)) {
+      // The baked shade of a tree that gives way to a house simply reads as the house's own.
+      if (houses.some(house => Math.hypot(house.x - tree.x, house.z - tree.z) < 9)) continue;
       const h = tree.height;
       const q = Quaternion.RotationYawPitchRoll(tree.yaw, tree.lean, 0);
       trunks.push(Matrix.Compose(new Vector3(h * 0.035, h * 0.27, h * 0.035), q, new Vector3(tree.x, tree.y + h * 0.135, tree.z)));
@@ -538,6 +555,132 @@ export class RideScene {
       patches.push(Matrix.Compose(new Vector3(width, height, width), Quaternion.RotationYawPitchRoll(hash(seed, 62) * 6.28, 0, 0), new Vector3(p.x, y, p.z)));
     }
     this.instances(this.mesh('meadow-patches', meadowClump(look.dry), meadow), patches, 28, 0, 24);
+  }
+  private flowers(path: RoutePath) {
+    const density = { meadow: 0.5, lake: 0.45, river: 0.5, alpine: 0.14, reservoir: 0.22, chapel: 0.28 }[path.route.scenery ?? 'meadow'];
+    const palettes: [number, number, number][][] = [[[0.86, 0.2, 0.16], [0.95, 0.42, 0.2]], [[0.96, 0.82, 0.22], [0.97, 0.95, 0.88]], [[0.58, 0.44, 0.84], [0.93, 0.6, 0.78]]];
+    const petals = this.material('flowers', '#ffffff');
+    petals.backFaceCulling = false; petals.disableLighting = true; petals.emissiveColor = this.sunlight!.diffuse;
+    const patches: Matrix[][] = palettes.map(() => []);
+    for (let i = 0, d = 0; d < path.totalLength; i++, d += 3.5) for (const side of [-1, 1]) {
+      const seed = i * 17 + side;
+      if (hash(seed, 601) > density) continue;
+      // Flowers come in drifts: thick for a while, then none.
+      if (Math.sin(d / 90 + side) + Math.sin(d / 37) < -0.2) continue;
+      const p = roadside(path, d, side * (5.8 + hash(seed, 602) ** 2 * 16));
+      if (groundAt(path, p.x, p.z).distance < 5.6) continue;
+      const size = 0.9 + hash(seed, 603) * 0.9;
+      patches[Math.floor(hash(Math.floor(d / 60), 604) * palettes.length)].push(Matrix.Compose(new Vector3(size, size, size),
+        Quaternion.RotationYawPitchRoll(hash(seed, 605) * 6.28, 0, 0), new Vector3(p.x, terrainHeightAt(path, p.x, p.z), p.z)));
+    }
+    palettes.forEach((palette, n) => this.instances(this.mesh(`flowers-${n}`, flowerClump(palette), petals), patches[n], 70, 0, 48));
+  }
+  /** Villages, animals, fences, turbines and birds: the things that make a road somewhere. */
+  private life(path: RoutePath, towns: Village[]) {
+    const scenery = path.route.scenery ?? 'meadow';
+    const props = this.material('props', '#ffffff'); props.backFaceCulling = false; props.twoSidedLighting = true;
+    const settle = (mesh: Mesh, spot: Spot, sink = 0) => {
+      mesh.parent = this.content; mesh.material = props;
+      mesh.position.set(spot.x, spot.y - sink, spot.z); mesh.rotation.y = spot.yaw; mesh.scaling.setAll(spot.size);
+      mesh.freezeWorldMatrix();
+      return mesh;
+    };
+    for (const town of towns) {
+      for (const spot of town.houses) this.lazyZone(spot.x, spot.z, 12, 750, () => settle(house(this.scene, spot.seed, scenery), spot, 0.4));
+      for (const sign of town.signs) this.lazyZone(sign.x, sign.z, 3, 260, () => {
+        const name = board(this.scene, label(this.scene, [town.name], 512, 160, '#e9e5d6', '#1d3a2f'), 2.3, 0.72);
+        const pole = box(this.scene, [0.09, 1.5, 0.09], [0, -1.1, 0.06], '#7d8387'); pole.parent = name; pole.material = props;
+        name.parent = this.content; name.position.set(sign.x, sign.y + 1.9, sign.z); name.rotation.y = sign.yaw;
+        return name;
+      });
+    }
+    const compose = (spot: Spot, scale: Vector3, lift = 0, pitch = 0) => Matrix.Compose(scale,
+      Quaternion.RotationYawPitchRoll(spot.yaw, pitch, 0), new Vector3(spot.x, spot.y + lift, spot.z));
+    const scatter = (mesh: Mesh, matrices: Matrix[], range: number) => { mesh.material = props; if (matrices.length) this.instances(mesh, matrices, range); else mesh.dispose(); };
+    scatter(sheep(this.scene), flocks(path.route).map(s => compose(s, new Vector3(s.size, s.size, s.size))), 320);
+    scatter(bale(this.scene), bales(path.route).map(s => compose(s, new Vector3(s.size, s.size, s.size))), 420);
+    const { fences, guards } = barriers(path.route);
+    const rails = (list: Rail[], thick: number, tall: number, heights: number[]) => list.flatMap(r =>
+      heights.map(h => compose(r, new Vector3(thick, tall, r.length), h, r.pitch)));
+    scatter(post(this.scene, '#8c6d4c'), fences.posts.map(p => compose(p, new Vector3(0.13, 1.15, 0.13), -0.1)), 260);
+    scatter(rail(this.scene, '#9a7a56'), rails(fences.rails, 0.06, 0.11, [0.45, 0.88]), 260);
+    scatter(post(this.scene, '#7f858a'), guards.posts.map(p => compose(p, new Vector3(0.09, 0.72, 0.09), -0.12)), 320);
+    scatter(rail(this.scene, '#b9bec2'), rails(guards.rails, 0.05, 0.31, [0.46]), 320);
+    for (const spot of turbines(path.route)) this.lazyZone(spot.x, spot.z, 45, 1500, () => {
+      const { mesh, rotor } = turbine(this.scene);
+      rotor.material = props; rotor.isPickable = false; this.rotors.push(rotor);
+      return settle(mesh, spot, 2);
+    });
+    const feathers = this.material('birds', '#000000');
+    feathers.disableLighting = true; feathers.emissiveColor = Color3.FromHexString('#22272b'); feathers.backFaceCulling = false;
+    this.flock = Array.from({ length: 7 }, (_, i) => {
+      const node = new TransformNode(`bird-${i}`, this.scene); node.parent = this.content;
+      const wings = bird(this.scene);
+      for (const wing of wings) { wing.parent = node; wing.material = feathers; }
+      node.setEnabled(false);
+      return { node, wings };
+    });
+  }
+  /** What depends on the direction ridden: start and finish arches, sector banners and kilometre boards. */
+  private gates(path: RoutePath) {
+    this.gateGroup?.dispose();
+    const group = this.gateGroup = new TransformNode('gates', this.scene); group.parent = this.content;
+    const props = this.materials.find(m => m.name === 'props')!;
+    const frame = (distance: number) => {
+      const node = new TransformNode('gate', this.scene), s = path.sample(distance);
+      node.parent = group; node.position.set(s.position.x, s.position.y, s.position.z); node.rotation.y = Math.atan2(s.forward.x, s.forward.z);
+      return node;
+    };
+    const arch = (distance: number, text: string) => {
+      const node = frame(distance), green = '#193f32';
+      const body = merged([box(this.scene, [0.55, 6.6, 0.55], [-4.1, 2.9, 0], green), box(this.scene, [0.55, 6.6, 0.55], [4.1, 2.9, 0], green),
+        box(this.scene, [8.75, 1.25, 0.6], [0, 5.6, 0], green), box(this.scene, [8.75, 0.12, 0.66], [0, 6.28, 0], '#d4ef9c')], 'arch');
+      body.parent = node; body.material = props;
+      for (const turn of [0, Math.PI]) {
+        const banner = board(this.scene, label(this.scene, [text], 1024, 128, green, '#d4ef9c'), 7.4, 0.95);
+        banner.parent = node; banner.position.set(0, 5.6, turn ? 0.32 : -0.32); banner.rotation.y = turn;
+      }
+    };
+    if (path.isCircuit) arch(0, 'META');
+    else { arch(Math.min(14, path.totalLength / 4), 'SALIDA'); arch(path.totalLength - 1, 'META'); }
+    for (const n of [1, 2]) {
+      const node = frame(path.totalLength * n / 3);
+      for (const side of [-1, 1]) {
+        const banner = board(this.scene, label(this.scene, ['SECTOR', String(n + 1)], 160, 400, '#7d4bc4', '#ffffff'), 1.0, 2.5);
+        banner.parent = node; banner.position.set(side * 4.5, 2.6, 0);
+        const pole = box(this.scene, [0.08, 4.2, 0.08], [side * (4.5 + 0.56), 2.0, 0], '#e7e9ea'); pole.parent = node; pole.material = props;
+      }
+    }
+    // Every kilometre board shares one texture and one mesh.
+    const count = Math.floor((path.totalLength - 150) / 1000);
+    if (count < 1) return;
+    const columns = 8, rows = Math.ceil((count + 1) / columns), atlas = label(this.scene, [], columns * 128, rows * 64, '#f4f1e6', '#1d3a2f');
+    const texture = atlas.diffuseTexture as DynamicTexture, ctx = texture.getContext() as unknown as CanvasRenderingContext2D;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '700 34px Poppins, sans-serif';
+    const data = new VertexData(), positions: number[] = [], uvs: number[] = [], normals: number[] = [], indices: number[] = [];
+    const quad = (center: Vec3, right: Vec3, face: Vec3, width: number, height: number, cell: number) => {
+      const base = positions.length / 3, col = cell % columns, row = Math.floor(cell / columns);
+      for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        positions.push(center.x + right.x * sx * width / 2, center.y + sy * height / 2, center.z + right.z * sx * width / 2);
+        uvs.push((col + (sx + 1) / 2) / columns, 1 - (row + (1 - sy) / 2) / rows); normals.push(face.x, 0, face.z);
+      }
+      indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    };
+    // The cell after the last number is plain grey: it paints the posts.
+    ctx.fillStyle = '#7d8387'; ctx.fillRect(count % columns * 128, Math.floor(count / columns) * 64, 128, 64);
+    for (let k = 1; k <= count; k++) {
+      const cell = k - 1, s = path.sample(k * 1000), f = s.forward, flat = Math.hypot(f.x, f.z) || 1;
+      const right = { x: f.z / flat, y: 0, z: -f.x / flat }, face = { x: -f.x / flat, y: 0, z: -f.z / flat };
+      const foot = roadside(path, k * 1000, 4.8);
+      ctx.fillStyle = '#1d3a2f'; ctx.fillText(`KM ${k}`, cell % columns * 128 + 64, Math.floor(cell / columns) * 64 + 34);
+      quad({ x: foot.x, y: foot.y + 1.55, z: foot.z }, right, face, 1.15, 0.58, cell);
+      quad({ x: foot.x, y: foot.y + 0.62, z: foot.z }, right, face, 0.08, 1.3, count);
+    }
+    texture.update();
+    data.positions = positions; data.indices = indices; data.uvs = uvs; data.normals = normals;
+    const boards = new Mesh('km-boards', this.scene); data.applyToMesh(boards);
+    boards.material = atlas; boards.parent = group; boards.isPickable = false;
+    boards.onDisposeObservable.add(() => atlas.dispose(true, true));
   }
   private landmarks(path: RoutePath) {
     const lake = lakeFor(path.route);
@@ -733,11 +876,11 @@ export class RideScene {
     group.setEnabled(false); return group;
   }
   private peloton() {
-    const cloth = this.material('rider', '#ffffff'); cloth.specularColor.set(0.1, 0.1, 0.1); cloth.specularPower = 24;
-    const shadow = this.material('rider-shadow', '#000000');
-    shadow.disableLighting = true; shadow.backFaceCulling = false; shadow.zOffset = -2;
+    const materials = riderMaterials(this.scene);
+    this.materials.push(materials.body, materials.spokes, materials.shadow);
+    this.content!.onDisposeObservable.add(() => materials.spokes.diffuseTexture?.dispose());
     this.riders = PELOTON.map((rival, index) => {
-      const rider = createRider(this.scene, rival, index, this.content!, cloth, shadow);
+      const rider = createRider(this.scene, rival, index, this.content!, materials);
       rider.root.setEnabled(false); return rider;
     });
   }
@@ -752,9 +895,27 @@ export class RideScene {
       if (!visible) continue;
       rider.root.position.set(p.x, p.y + roadHeight(rival.rival.lane), p.z);
       rider.root.rotation.set(-Math.atan(sample.slope), Math.atan2(sample.forward.x, sample.forward.z),
-        this.motion ? 0.035 * Math.sin(rival.crankAngle) : 0);
-      rider.pose(rival.crankAngle);
+        -bendLean(this.path!, rival.distance, rival.speedMps) + (this.motion ? 0.035 * Math.sin(rival.crankAngle) : 0));
+      rider.pose(rival.crankAngle, rival.progress / WHEEL_RADIUS);
     }
+  }
+  /** The few things that move by themselves: turbine blades and a flock of birds ahead of the rider. */
+  private animate(state: RideState) {
+    const t = state.elapsedSeconds;
+    if (this.rotors.some(rotor => rotor.isDisposed())) this.rotors = this.rotors.filter(rotor => !rotor.isDisposed());
+    for (const rotor of this.rotors) rotor.rotation.z = t * 0.85 + rotor.uniqueId;
+    const f = state.forward, flat = Math.hypot(f.x, f.z) || 1, fx = f.x / flat, fz = f.z / flat;
+    // The flock wheels slowly around a point that drifts ahead and to the sides of the road.
+    const ahead = 150 + 70 * Math.sin(t / 23), aside = 90 * Math.sin(t / 17);
+    const cx = state.position.x + fx * ahead + fz * aside, cz = state.position.z + fz * ahead - fx * aside;
+    this.flock.forEach(({ node, wings }, i) => {
+      const angle = t * 0.22 + i * 0.42, radius = 46 + i * 7;
+      node.setEnabled(this.motion);
+      node.position.set(cx + Math.cos(angle) * radius, state.position.y + 34 + i * 2.5 + 6 * Math.sin(t / 5 + i), cz + Math.sin(angle) * radius);
+      node.rotation.y = -angle; node.scaling.setAll(1.6);
+      const flap = 0.55 * Math.sin(t * 7 + i * 1.9);
+      wings[0].rotation.z = -flap; wings[1].rotation.z = flap;
+    });
   }
   showPreview(view?: PreviewView, build = true) {
     if (!this.path) return;
@@ -766,6 +927,7 @@ export class RideScene {
     this.camera.minZ = 2; this.camera.fov = 0.9; this.camera.setTarget(vec(pose.target));
     this.cockpitGroup?.setEnabled(false); this.ghost?.setEnabled(false);
     for (const rider of this.riders) rider.root.setEnabled(false);
+    for (const { node } of this.flock) node.setEnabled(false);
     this.lastZoneX = Infinity; this.updateZones();
     if (build) this.buildZones(Infinity);
     this.needsRender = true;
@@ -780,8 +942,10 @@ export class RideScene {
     const pose = cameraPose(this.path, state, this.motion);
     this.camera.position.copyFrom(vec(pose.eye)); this.camera.upVector.copyFrom(vec(pose.up));
     this.camera.setTarget(vec(pose.target));
+    if (this.cockpitGroup) { this.cockpitGroup.rotation.y = pose.steer; this.cockpitGroup.rotation.z = -pose.bend * 0.45; }
     this.updateZones();
     this.updateRiders(state);
+    this.animate(state);
     if (this.ghost) {
       const visible = state.ghostDistance !== null && Math.abs(state.ghostDistance - state.distance) > 2;
       this.ghost.setEnabled(visible);
