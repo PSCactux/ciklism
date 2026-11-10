@@ -214,5 +214,113 @@
     "pixelsX": 2048,
     "pixelsZ": 2048,
     "bytes": 68484
+  },
+  "e9a735a6": {
+    "route": "gran_vuelta",
+    "daylight": "dia",
+    "file": "e9a735a6.webp",
+    "x": -4965,
+    "z": -320,
+    "width": 9670,
+    "depth": 10770,
+    "pixelsX": 2048,
+    "pixelsZ": 2048,
+    "bytes": 35104
+  },
+  "b2e466f7": {
+    "route": "gran_vuelta",
+    "daylight": "amanecer",
+    "file": "b2e466f7.webp",
+    "x": -4965,
+    "z": -320,
+    "width": 9670,
+    "depth": 10770,
+    "pixelsX": 2048,
+    "pixelsZ": 2048,
+    "bytes": 71898
+  },
+  "6e4e741f": {
+    "route": "gran_vuelta",
+    "daylight": "atardecer",
+    "file": "6e4e741f.webp",
+    "x": -4965,
+    "z": -320,
+    "width": 9670,
+    "depth": 10770,
+    "pixelsX": 2048,
+    "pixelsZ": 2048,
+    "bytes": 81386
+  },
+  "689be0e2": {
+    "route": "valle_largo",
+    "daylight": "dia",
+    "file": "689be0e2.webp",
+    "x": -540,
+    "z": -540,
+    "width": 21347,
+    "depth": 34981,
+    "pixelsX": 2048,
+    "pixelsZ": 2048,
+    "bytes": 116772
+  },
+  "18a99ffb": {
+    "route": "valle_largo",
+    "daylight": "amanecer",
+    "file": "18a99ffb.webp",
+    "x": -540,
+    "z": -540,
+    "width": 21347,
+    "depth": 34981,
+    "pixelsX": 2048,
+    "pixelsZ": 2048,
+    "bytes": 140958
+  },
+  "32ac388b": {
+    "route": "valle_largo",
+    "daylight": "atardecer",
+    "file": "32ac388b.webp",
+    "x": -540,
+    "z": -540,
+    "width": 21347,
+    "depth": 34981,
+    "pixelsX": 2048,
+    "pixelsZ": 2048,
+    "bytes": 139994
+  },
+  "4f69c7b0": {
+    "route": "gran_fondo",
+    "daylight": "dia",
+    "file": "4f69c7b0.webp",
+    "x": -21686,
+    "z": -320,
+    "width": 22444,
+    "depth": 48714,
+    "pixelsX": 1024,
+    "pixelsZ": 2048,
+    "bytes": 4376
+  },
+  "8641f343": {
+    "route": "gran_fondo",
+    "daylight": "amanecer",
+    "file": "8641f343.webp",
+    "x": -21686,
+    "z": -320,
+    "width": 22444,
+    "depth": 48714,
+    "pixelsX": 1024,
+    "pixelsZ": 2048,
+    "bytes": 5286
+  },
+  "f273206f": {
+    "route": "gran_fondo",
+    "daylight": "atardecer",
+    "file": "f273206f.webp",
+    "x": -21686,
+    "z": -320,
+    "width": 22444,
+    "depth": 48714,
+    "pixelsX": 1024,
+    "pixelsZ": 2048,
+    "bytes": 5356
   }
 }

@@ -137,7 +137,7 @@ test('route filters, immersive HUD and safe finish keep the ride intact', async 
   await expect(page.locator('.route-card').filter({ hasText: 'Óvalo del Prado' })).toHaveCount(0);
   await expect(page.locator('.route-card').filter({ hasText: 'Puerto de la Ermita' })).toBeVisible();
   await page.getByRole('button', { name: 'Todas', exact: true }).click();
-  await expect(page.locator('.route-card')).toHaveCount(6);
+  await expect(page.locator('.route-card')).toHaveCount(9);
   await page.getByRole('button', { name: 'Probar la ruta' }).click();
   await expect(page.locator('#cadence')).toHaveText('80', { timeout: 15000 });
   await page.getByRole('button', { name: 'Ocultar datos secundarios' }).click();
@@ -202,4 +202,30 @@ test('short landscape screen keeps essential controls separate and keyboard paus
   await page.keyboard.press('Tab');
   await expect(first).toBeFocused();
   expect(await page.locator('.ride-controls').evaluate((el: HTMLElement) => el.inert)).toBe(true);
+});
+
+test('a sixty-kilometre course opens, and rivals race it until they are switched off', async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/');
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  await page.getByRole('button', { name: /Gran Fondo de la Sierra/ }).click();
+  await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
+  await expect(page.locator('.route-facts')).toContainText('60,0');
+  await page.getByRole('button', { name: 'Probar la ruta' }).click();
+  await expect(page.locator('#place-of')).toHaveText('de 12', { timeout: 15000 });
+  await expect(page.locator('#rival-ahead')).toContainText(/\d+ m/);
+  await expect.poll(async () => parseInt(await page.locator('#place').innerText()), { timeout: 30000 }).toBeLessThan(12);
+  await page.screenshot({ path: testInfo.outputPath('rivals.png') });
+  await page.getByRole('button', { name: 'Terminar', exact: true }).click();
+  await page.getByRole('button', { name: 'Guardar salida', exact: false }).click();
+  await expect(page.getByRole('dialog')).toContainText(/Has acabado \d+º de 12/);
+  await page.getByRole('button', { name: 'Volver al camino' }).click();
+  await page.getByRole('button', { name: 'Ajustes', exact: true }).click();
+  await page.locator('#rivals').selectOption('off');
+  await page.getByRole('button', { name: 'Listo', exact: true }).click();
+  await page.getByRole('button', { name: 'Probar la ruta' }).click();
+  await expect(page.locator('#cadence')).toHaveText('80', { timeout: 15000 });
+  await expect(page.locator('#standings')).toBeHidden();
+  expect(errors).toEqual([]);
 });

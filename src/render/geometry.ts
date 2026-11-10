@@ -78,11 +78,45 @@ export function terrainRise(distance: number, offset: number) {
   return blend * (5 + Math.sin(distance / 130 + offset / 100) * 8 + Math.sin(distance / 340 - offset / 70) * 14);
 }
 
+const INDEX_CELL = 256;
+interface RoadIndex { travelled: number[]; cells: Map<number, number[]> }
+const roadIndexes = new WeakMap<Vec3[], RoadIndex>();
+function segmentDistance(points: Vec3[], i: number, x: number, z: number) {
+  const a = points[i - 1], b = points[i], dx = b.x - a.x, dz = b.z - a.z;
+  const t = Math.min(1, Math.max(0, ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz || 1)));
+  return Math.hypot(x - a.x - dx * t, z - a.z - dz * t);
+}
+/** Segments that can be the nearest one for some point of the cell, in route order.
+ * Long courses would otherwise test every segment for every terrain vertex. */
+function nearSegments(points: Vec3[], x: number, z: number) {
+  let index = roadIndexes.get(points);
+  if (!index) {
+    const travelled = [0];
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1], b = points[i];
+      travelled.push(travelled[i - 1] + Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z));
+    }
+    roadIndexes.set(points, index = { travelled, cells: new Map() });
+  }
+  const cx = Math.floor(x / INDEX_CELL), cz = Math.floor(z / INDEX_CELL), key = (cx + 32768) * 65536 + cz + 32768;
+  let cell = index.cells.get(key);
+  if (!cell) {
+    const centerX = (cx + 0.5) * INDEX_CELL, centerZ = (cz + 0.5) * INDEX_CELL, distances: number[] = [0];
+    for (let i = 1; i < points.length; i++) distances.push(segmentDistance(points, i, centerX, centerZ));
+    // A point of the cell is at most half a diagonal from its centre, and so is its nearest segment's lead.
+    const reach = Math.min(...distances.slice(1)) + INDEX_CELL * Math.SQRT2 + 0.001;
+    cell = [];
+    for (let i = 1; i < points.length; i++) if (distances[i] <= reach) cell.push(i);
+    index.cells.set(key, cell);
+  }
+  return { segments: cell, travelled: index.travelled };
+}
+
 /** A single height field avoids overlapping terrain ribbons covering other legs of a circuit. */
 export function groundAt(path: RoutePath, x: number, z: number) {
-  let closest = Infinity, altitude = 0, lateral = 0, along = 0, travelled = 0;
-  const points = path.route.puntos;
-  for (let i = 1; i < points.length; i++) {
+  let closest = Infinity, altitude = 0, lateral = 0, along = 0;
+  const points = path.route.puntos, { segments, travelled } = nearSegments(points, x, z);
+  for (const i of segments) {
     const a = points[i - 1], b = points[i];
     const dx = b.x - a.x, dz = b.z - a.z;
     const t = Math.min(1, Math.max(0, ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz || 1)));
@@ -91,9 +125,8 @@ export function groundAt(path: RoutePath, x: number, z: number) {
     if (distance < closest) {
       closest = distance; altitude = a.y + (b.y - a.y) * t;
       lateral = (ex * dz - ez * dx) / (Math.hypot(dx, dz) || 1);
-      along = travelled + Math.hypot(dx, b.y - a.y, dz) * t;
+      along = travelled[i - 1] + Math.hypot(dx, b.y - a.y, dz) * t;
     }
-    travelled += Math.hypot(dx, b.y - a.y, dz);
   }
   closest = Math.sqrt(closest);
   const blend = Math.min(1, Math.max(0, (closest - 9) / 100));
@@ -175,17 +208,15 @@ export function terrainCells(path: RoutePath) {
   }
   return [...cells.values()];
 }
-export function* terrainTiles(path: RoutePath): Generator<Geometry> {
-  for (const { x, z } of terrainCells(path)) {
-    const distance = groundAt(path, x + TILE_SIZE / 2, z + TILE_SIZE / 2).distance;
-    yield terrainTile(path, x, z, distance < 180 ? 12 : distance < 250 ? 24 : 48);
-  }
+/** Grid size of a tile: fine beside the road, coarser where nobody rides. */
+export function terrainStep(path: RoutePath, x: number, z: number) {
+  const distance = groundAt(path, x + TILE_SIZE / 2, z + TILE_SIZE / 2).distance;
+  return distance < 180 ? 12 : distance < 250 ? 24 : 48;
 }
 /** Anchor small objects to the rendered triangles, including coarse tile edges. */
 export function terrainHeightAt(path: RoutePath, x: number, z: number) {
   const tx = Math.floor(x / TILE_SIZE) * TILE_SIZE, tz = Math.floor(z / TILE_SIZE) * TILE_SIZE;
-  const distance = groundAt(path, tx + TILE_SIZE/2, tz + TILE_SIZE/2).distance;
-  const step = distance < 180 ? 12 : distance < 250 ? 24 : 48;
+  const step = terrainStep(path, tx, tz);
   const cx = tx + Math.floor((x-tx)/step) * step, cz = tz + Math.floor((z-tz)/step) * step;
   const corners = [[cx,cz], [cx+step,cz], [cx+step,cz+step], [cx,cz+step]], border: number[][] = [];
   corners.forEach((p, i) => {

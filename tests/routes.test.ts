@@ -7,10 +7,11 @@ import { treeLayout } from '../src/render/lighting';
 const files = import.meta.glob<Route>('../src/routes/*.json', { eager: true, import: 'default' });
 const routes = Object.fromEntries(Object.entries(files).map(([file, route]) => [file.split('/').at(-1)!.replace('.json', ''), route]));
 it('has distinct course lengths measured from geometry, with long point-to-point journeys', () => {
-  for (const [id, km] of Object.entries({ ovalo: 1, ruta_inicial: 4, valle: 12, puerto: 20, embalse: 8, ermita: 15 })) {
+  for (const [id, km] of Object.entries({ ovalo: 1, ruta_inicial: 4, valle: 12, puerto: 20, embalse: 8, ermita: 15,
+    gran_vuelta: 30, valle_largo: 45, gran_fondo: 60 })) {
     const path = new RoutePath(routes[id]);
     expect(path.totalLength / 1000).toBeCloseTo(km, 1);
-    expect(path.isCircuit).toBe(!['valle', 'puerto'].includes(id));
+    expect(path.isCircuit).toBe(!['valle', 'puerto', 'valle_largo', 'gran_fondo'].includes(id));
     expect(new RoutePath(routes[id], true).totalLength).toBeCloseTo(path.totalLength, 6);
     for (let i = 1; i < path.points.length; i++) {
       const a = path.points[i - 1], b = path.points[i];

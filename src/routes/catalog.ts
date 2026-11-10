@@ -9,6 +9,9 @@ const descriptions: Record<string, string> = {
   puerto: 'Veinte kilómetros de montaña, roca y ascenso.',
   embalse: 'Kilómetros tranquilos alrededor del agua.',
   ermita: 'La subida larga. Las mejores vistas.',
+  gran_vuelta: 'Treinta kilómetros de colinas doradas, sin un metro llano.',
+  valle_largo: 'Cuarenta y cinco kilómetros siguiendo el río, para rodar sin prisa.',
+  gran_fondo: 'Sesenta kilómetros de sierra. El día grande.',
 };
 export const routes = Object.entries(files).map(([file, route]) => {
   const id = file.replace('./', '').replace('.json', '');

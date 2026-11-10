@@ -2,10 +2,14 @@ import type { Lap } from './laps';
 
 export const LEVELS = ['Principiante', 'Cicloturista', 'Rodador', 'Gregario', 'Escalador',
   'Cazaetapas', 'Contrarrelojista', 'Escapado', 'Líder', 'Campeón'];
-export const routeLevel: Record<string, number> = { ovalo: 1, ruta_inicial: 1, valle: 2, puerto: 3, embalse: 4, ermita: 5 };
+/** Orders the catalogue from gentle to demanding; nothing is locked behind a level. */
+export const routeLevel: Record<string, number> = { ovalo: 1, ruta_inicial: 1, valle: 2, puerto: 3, embalse: 4, ermita: 5,
+  gran_vuelta: 6, valle_largo: 7, gran_fondo: 8 };
 export interface Outcome {
   meters: number; seconds: number; climbMeters: number; laps: Lap[];
   finishedRoute: boolean; light: string;
+  /** Final place among the riders on the road, when the ride had rivals. */
+  place?: number; riders?: number;
 }
 export interface Totals { xp: number; meters: number; seconds: number; climbMeters: number; sessions: number; laps: number }
 export const emptyTotals = (): Totals => ({ xp: 0, meters: 0, seconds: 0, climbMeters: 0, sessions: 0, laps: 0 });
@@ -38,10 +42,15 @@ export const ACHIEVEMENTS = [
   ['madrugador', 'Madrugador', 'Rueda al amanecer'],
   ['ultima_luz', 'Última luz', 'Rueda al atardecer'],
   ['ruta_completa', 'Hasta el final', 'Completa una ruta'],
+  ['podio', 'Al podio', 'Acaba entre los tres primeros'],
+  ['victoria', 'Brazos en alto', 'Gana a todos tus rivales'],
 ] as const;
 export function earned(t: Totals, o: Outcome, already: string[]): string[] {
+  // A place only counts once there has been a race: a finished course or a full lap.
+  const raced = o.place !== undefined && (o.finishedRoute || o.laps.length > 0);
   const conditions = [t.sessions >= 1, t.meters >= 1e4, t.meters >= 1e5, o.seconds >= 1800,
     t.climbMeters >= 500, t.climbMeters >= 2000, o.laps.some(l => l.record), o.laps.length >= 3,
-    o.laps.some(l => l.sectors.some(s => s.best)), o.light === 'amanecer', o.light === 'atardecer', o.finishedRoute];
+    o.laps.some(l => l.sectors.some(s => s.best)), o.light === 'amanecer', o.light === 'atardecer', o.finishedRoute,
+    raced && o.place! <= 3, raced && o.place === 1];
   return ACHIEVEMENTS.filter((a, i) => conditions[i] && !already.includes(a[0])).map(a => a[0]);
 }

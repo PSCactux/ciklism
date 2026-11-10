@@ -17,6 +17,7 @@ import { elevation, escape as esc, km, number, routeMap, time } from './ui/forma
 import { CadenceWindow, MAX_LEVELS, ratioFor, signalState, speedKmh } from './domain/bike';
 import { clamp } from './domain/route';
 import { calibrationView, levelsList, stepSpeed, typedSpeed, updateCalibration } from './ui/calibration';
+import { PELOTON, Peloton, RIVAL_LEVELS, usualPace } from './domain/rivals';
 
 const root = document.querySelector<HTMLDivElement>('#app')!;
 root.innerHTML = `<canvas id="world" aria-label="Ruta de ciclismo en tres dimensiones"></canvas>
@@ -143,7 +144,7 @@ function rideUI() {
   previewObserver.disconnect(); positionMobileCanvas(); window.scrollTo(0, 0);
   ui.innerHTML = `<div class="ride-overlay"><header class="ride-header">${brand()}<div class="ride-route-name"><strong>${esc(option.route.nombre)}</strong><span id="source-badge"></span></div><div class="ride-header-actions"><button class="icon-button" data-action="focus" aria-label="Ocultar datos secundarios" aria-pressed="false" title="Vista despejada">${icons.focus}</button><button class="glass-button" data-action="pause" id="pause-top">${icons.pause}<span>Pausar</span></button></div></header>
     <section class="hud" aria-label="Datos de la salida"><div class="speed"><small>VELOCIDAD</small><div><span id="speed">0</span><small>km/h</small></div></div><div class="hud-metric"><small>CADENCIA</small><div><span id="cadence">0</span><small>rpm</small></div></div><div class="hud-metric secondary-metric"><small>DISTANCIA</small><div><span id="distance">0,0</span><small>km</small></div></div><div class="hud-metric secondary-metric"><small>TIEMPO</small><div><span id="elapsed">00:00</span></div></div><div class="hud-metric optional-metric"><small>ASCENSO</small><div><span id="climb">0</span><small>m</small></div></div></section>
-    <div class="ride-side"><button class="map-toggle glass-button" data-action="map" aria-expanded="false" aria-controls="ride-map">${icons.route}<span>Mapa</span></button><div class="route-mini" id="ride-map">${routeMap(path)}<span id="lap-label">VUELTA 1</span></div><div class="ghost-info" id="ghost-info" hidden></div><button class="glass-button" id="reconnect" data-action="connect" hidden>Reconectar sensor</button></div>
+    <div class="ride-side"><button class="map-toggle glass-button" data-action="map" aria-expanded="false" aria-controls="ride-map">${icons.route}<span>Mapa</span></button><div class="route-mini" id="ride-map">${routeMap(path)}<span id="lap-label">VUELTA 1</span></div><div class="standings" id="standings" ${engine!.state.standing ? '' : 'hidden'}><div class="standing-place"><strong id="place"></strong><span id="place-of"></span></div><div class="standing-gap"><small>DELANTE</small><span id="rival-ahead"></span></div><div class="standing-gap"><small>DETRÁS</small><span id="rival-behind"></span></div></div><div class="ghost-info" id="ghost-info" hidden></div><button class="glass-button" id="reconnect" data-action="connect" hidden>Reconectar sensor</button></div>
     <div class="pause-cover" id="pause-cover" hidden role="dialog" aria-modal="true" aria-labelledby="pause-title"><div><span class="pause-symbol">${icons.pause}</span><span class="eyebrow">TÓMATE UN RESPIRO</span><h2 id="pause-title">Tu salida, en pausa.</h2><p>El camino seguirá aquí cuando vuelvas.</p><div class="pause-stats"><span><strong id="pause-distance"></strong> km recorridos</span><span><strong id="pause-time"></strong> de actividad</span></div><button class="primary" data-action="pause">${icons.play} Seguir rodando</button><button class="secondary full-width" data-action="settings">${icons.settings} Ajustes de la experiencia</button><button class="text-button" data-action="finish">Terminar y guardar</button></div></div>
     <div class="level-cue" id="level-cue" role="status" hidden></div>
     <footer class="ride-controls"><div class="route-progress" role="progressbar" aria-label="Progreso de la ruta" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="route-progress-fill"></span></div><div class="ride-controls-top"><div class="gear-control" ${engine!.gearCount > 1 ? '' : 'hidden'}><button data-shift="-1" aria-label="Bajar ${ownLevels ? 'nivel' : 'marcha'}">−</button><div><strong id="gear"></strong><small>${ownLevels ? 'NIVEL' : 'MARCHA'}</small></div><button data-shift="1" aria-label="Subir ${ownLevels ? 'nivel' : 'marcha'}">+</button></div>
@@ -172,6 +173,13 @@ function calibrationKey() { return sensor.info.name || 'por defecto'; }
 function calibration() { return settings.calibration[calibrationKey()] ?? 1; }
 // Registered levels already carry the bike's own speed, so the general factor stays out of them.
 function rideFactor() { return mode === 'demo' || ownLevels ? 1 : calibration(); }
+/** Rivals ride around the rider's own usual speed, so the race is close whatever the bike or the legs. */
+async function rivalPace() {
+  const gear = engine!.state.gear, ratio = ownLevels ? settings.bike.levels[gear].metersPerRev : GEARS[gear] * rideFactor();
+  if (mode === 'demo') return ratio * demoRpm / 60;
+  return usualPace(await store.sessions()) ?? (ownLevels ? ratio * 75 / 60 : 24 / 3.6);
+}
+function gapText(meters: number) { return meters < 1000 ? `${Math.round(meters)} m` : `${km(meters)} km`; }
 function bikeNote() {
   const count = settings.bike.levels.length;
   return count ? `Bici calibrada · ${count} ${count === 1 ? 'nivel' : 'niveles'}` : 'Bici sin calibrar: la velocidad puede no coincidir con la que marca tu bici.';
@@ -189,6 +197,8 @@ async function start() {
     recorder = new SessionRecorder(); startedAt = Date.now();
     sessionId = crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint8Array(16)), n => n.toString(16).padStart(2, '0')).join('');
     lastCheckpoint = 0; checkpointFailed = false;
+    if (settings.rivals !== 'off') engine.race(new Peloton(path, await rivalPace() * RIVAL_LEVELS[settings.rivals]));
+    await renderer.warm(engine.state.position);
     clock.reset(); running = true; rideUI(); await keepAwake();
   } finally { busy = false; }
 }
@@ -209,6 +219,7 @@ function makeSession(): Session {
     deviceName: mode === 'demo' ? 'Cadencia simulada' : sensor.info.name, light: daylight,
     meters: s.travelled, seconds: s.elapsedSeconds, climbMeters: s.climbMeters,
     laps: structuredClone(engine!.timer.laps), finishedRoute: s.finished, samples: [...recorder.samples],
+    ...(s.standing ? { place: s.standing.place, riders: s.standing.riders } : {}),
     record: engine!.timer.record(), xp: 0, achievements: [] };
 }
 async function checkpoint() {
@@ -247,6 +258,17 @@ function updateHud() {
   for (const direction of [-1, 1]) {
     const button = ui.querySelector<HTMLButtonElement>(`[data-shift="${direction}"]`);
     if (button) button.disabled = direction < 0 ? s.gear === 0 : s.gear === engine.gearCount - 1;
+  }
+  if (s.standing) {
+    const rival = (id: string, gap: typeof s.standing.ahead, none: string) => {
+      const el = ui.querySelector(`#${id}`); if (!el) return;
+      const html = gap ? `<i style="background:${gap.jersey}"></i>${esc(gap.name)} <b>${gapText(gap.meters)}</b>` : none;
+      if (el.innerHTML !== html) el.innerHTML = html;
+    };
+    const place = ui.querySelector('#place'), of = ui.querySelector('#place-of');
+    if (place) place.textContent = `${s.standing.place}º`;
+    if (of) of.textContent = `de ${s.standing.riders}`;
+    rival('rival-ahead', s.standing.ahead, 'Vas en cabeza'); rival('rival-behind', s.standing.behind, 'Nadie');
   }
   const cue = ui.querySelector<HTMLElement>('#level-cue');
   if (cue) {
@@ -340,7 +362,7 @@ function chart(s: Session) {
   return `<div class="session-chart"><span>VELOCIDAD · ${number(maximum * 3.6)} km/h máx.</span><svg viewBox="0 0 500 120" role="img" aria-label="Velocidad durante la sesión"><polygon points="0,120 ${line} 500,120"/><polyline points="${line}"/></svg><div><span>Inicio</span><span>${time(s.seconds)}</span></div></div>`;
 }
 function showSession(s: Session, justFinished = false) {
-  modal(justFinished ? 'Bien rodado.' : 'Detalle de la salida', `${!justFinished ? '<button class="back-link" data-action="history">← Todas las salidas</button>' : ''}<div class="summary-intro"><span class="eyebrow">${s.mode === 'demo' ? 'EXPLORACIÓN DEMO' : 'SALIDA GUARDADA'}</span><h3>${esc(s.routeName)}</h3><p>${s.finishedRoute ? 'Ruta completada · ' : ''}${new Date(s.startedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} · ${esc(s.deviceName)}</p></div>
+  modal(justFinished ? 'Bien rodado.' : 'Detalle de la salida', `${!justFinished ? '<button class="back-link" data-action="history">← Todas las salidas</button>' : ''}<div class="summary-intro"><span class="eyebrow">${s.mode === 'demo' ? 'EXPLORACIÓN DEMO' : 'SALIDA GUARDADA'}</span><h3>${esc(s.routeName)}</h3><p>${s.finishedRoute ? 'Ruta completada · ' : ''}${new Date(s.startedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} · ${esc(s.deviceName)}</p>${s.place ? `<p class="summary-place">Has acabado <strong>${s.place}º de ${s.riders}</strong>${s.place === 1 ? '. Nadie te ha seguido la rueda.' : s.place <= 3 ? '. En el podio.' : '.'}</p>` : ''}</div>
     <div class="summary-stats"><div><strong>${km(s.meters)}</strong><span>kilómetros</span></div><div><strong>${time(s.seconds)}</strong><span>tiempo</span></div><div><strong>${Math.round(s.climbMeters)}</strong><span>metros ↗</span></div><div><strong>${number(s.seconds ? s.meters / s.seconds * 3.6 : 0)}</strong><span>km/h media</span></div></div>${chart(s)}
     ${s.laps.length ? `<h3>Vueltas</h3><div class="laps-list">${s.laps.map(l => `<div><span>Vuelta ${l.number}</span><strong>${time(l.seconds)}</strong><span>${l.record ? '★ Mejor marca' : ''}</span></div>`).join('')}</div>` : ''}
     ${s.mode === 'sensor' ? `<div class="reward"><strong>+${s.xp} XP</strong><span>Cada pedalada cuenta.</span></div>` : '<p class="muted">La demo no suma experiencia ni cambia tus récords reales.</p>'}
@@ -352,7 +374,7 @@ function showProfile() {
   modal('Tu camino', `<div class="profile-summary"><span class="level-avatar">${level.number}</span><h3>${level.name}</h3><p>${profile.totals.xp} XP ${level.next ? `· próximo nivel a ${level.next} XP` : ''}</p><progress max="1" value="${level.progress}" aria-label="Progreso hacia el siguiente nivel"></progress><p>${km(profile.totals.meters)} km · ${profile.totals.sessions} salidas · ${Math.round(profile.totals.climbMeters)} m de desnivel</p></div><div class="section-heading"><h3>Tus logros</h3><span>${profile.achievements.length} de ${ACHIEVEMENTS.length}</span></div><div class="achievements">${ACHIEVEMENTS.map(a => `<div class="achievement ${profile.achievements.includes(a[0]) ? 'earned' : ''}"><span>${profile.achievements.includes(a[0]) ? icons.trophy : icons.lock}</span><strong>${a[1]}</strong><small>${a[2]}</small><span class="achievement-status">${profile.achievements.includes(a[0]) ? 'Conseguido' : 'Por desbloquear'}</span></div>`).join('')}</div><p class="muted progress-note">Las salidas con sensor suman experiencia. Las demos son para explorar.</p>`, 'profile');
 }
 function showSettings() {
-  modal('A tu manera', `<p class="muted">Encuentra el equilibrio entre detalle, comodidad y autonomía.</p><section class="settings-section"><h3>${icons.focus} Pantalla y movimiento</h3><div class="settings-row"><label for="quality">Calidad visual<small>Automática adapta el detalle. Ahorro prioriza la autonomía. Alta muestra todos los efectos.</small></label><select id="quality">${[['auto', 'Automática'], ['high', 'Alta'], ['low', 'Ahorro']].map(([id, label]) => `<option value="${id}" ${settings.quality === id ? 'selected' : ''}>${label}</option>`).join('')}</select></div><div class="settings-row"><label for="motion">Balanceo al pedalear<small>Un movimiento suave que acompaña tus pedaladas. Desactívalo si prefieres una cámara estable.</small></label><input class="switch" type="checkbox" role="switch" id="motion" ${settings.motion ? 'checked' : ''}/></div></section><section class="settings-section"><h3>${icons.bike} Durante la salida</h3><div class="shortcut-row"><span>Cambiar de marcha</span><span><kbd>+</kbd> <kbd>−</kbd> o botones táctiles</span></div><div class="shortcut-row"><span>Pausar y continuar</span><span><kbd>Espacio</kbd></span></div><p class="muted">Usa el botón de vista despejada para ocultar datos secundarios y disfrutar del camino.</p></section><div class="settings-note">${icons.lock}<p>Tu historial y tus ajustes viven en este dispositivo. Puedes llevarte tus salidas desde <strong>Mis salidas → Exportar copia</strong>.</p></div><button class="primary full-width" data-action="close">Listo ${icons.check}</button>`, 'settings');
+  modal('A tu manera', `<p class="muted">Encuentra el equilibrio entre detalle, comodidad y autonomía.</p><section class="settings-section"><h3>${icons.focus} Pantalla y movimiento</h3><div class="settings-row"><label for="quality">Calidad visual<small>Automática adapta el detalle. Ahorro prioriza la autonomía. Alta muestra todos los efectos.</small></label><select id="quality">${[['auto', 'Automática'], ['high', 'Alta'], ['low', 'Ahorro']].map(([id, label]) => `<option value="${id}" ${settings.quality === id ? 'selected' : ''}>${label}</option>`).join('')}</select></div><div class="settings-row"><label for="motion">Balanceo al pedalear<small>Un movimiento suave que acompaña tus pedaladas. Desactívalo si prefieres una cámara estable.</small></label><input class="switch" type="checkbox" role="switch" id="motion" ${settings.motion ? 'checked' : ''}/></div></section><section class="settings-section"><h3>${icons.trophy} Rivales</h3><div class="settings-row"><label for="rivals">Ciclistas en la ruta<small>${PELOTON.length} ciclistas salen contigo. Su ritmo se ajusta al de tus últimas salidas con sensor, para que siempre tengas a alguien cerca.</small></label><select id="rivals">${[['even', 'A mi ritmo'], ['easy', 'Más tranquilos'], ['hard', 'Más fuertes'], ['off', 'Sin rivales']].map(([id, label]) => `<option value="${id}" ${settings.rivals === id ? 'selected' : ''}>${label}</option>`).join('')}</select></div></section><section class="settings-section"><h3>${icons.bike} Durante la salida</h3><div class="shortcut-row"><span>Cambiar de marcha</span><span><kbd>+</kbd> <kbd>−</kbd> o botones táctiles</span></div><div class="shortcut-row"><span>Pausar y continuar</span><span><kbd>Espacio</kbd></span></div><p class="muted">Usa el botón de vista despejada para ocultar datos secundarios y disfrutar del camino.</p></section><div class="settings-note">${icons.lock}<p>Tu historial y tus ajustes viven en este dispositivo. Puedes llevarte tus salidas desde <strong>Mis salidas → Exportar copia</strong>.</p></div><button class="primary full-width" data-action="close">Listo ${icons.check}</button>`, 'settings');
 }
 async function exportBackup() {
   const data = await store.export();
@@ -460,6 +482,7 @@ root.addEventListener('change', async event => {
       else settings.motion = input.checked;
       renderer.setOptions(settings.quality, settings.motion); await store.saveSettings(settings);
     }
+    if (input.id === 'rivals') { settings.rivals = input.value as typeof settings.rivals; await store.saveSettings(settings); }
     if (input.id === 'route-levels') { settings.bike.routeLevels = input.checked; await store.saveSettings(settings); }
     if (input.id === 'import-file' && input.files?.[0]) {
       if (input.files[0].size > 50 * 1024 * 1024) throw new Error('La copia supera los 50 MB.');

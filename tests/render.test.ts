@@ -86,3 +86,26 @@ describe('presentation budget', () => {
     expect(budget.sample(1, 16.7, 60)).toBe(false); expect(budget.scale).toBe(1);
   });
 });
+describe('road index', () => {
+  it('returns exactly what testing every segment would, near and far from the road', () => {
+    const files = import.meta.glob<{ nombre: string; puntos: { x: number; y: number; z: number }[] }>('../src/routes/*.json', { eager: true, import: 'default' });
+    for (const route of Object.values(files)) {
+      const path = new RoutePath(route), points = route.puntos;
+      for (let n = 0; n < 400; n++) {
+        const at = path.sample(path.totalLength * ((n * 0.6180339887) % 1)).position;
+        const x = at.x + Math.sin(n * 12.9898) * (n % 5 === 0 ? 2400 : 300), z = at.z + Math.cos(n * 78.233) * (n % 7 === 0 ? 2400 : 300);
+        let closest = Infinity, altitude = 0, along = 0, travelled = 0;
+        for (let i = 1; i < points.length; i++) {
+          const a = points[i - 1], b = points[i], dx = b.x - a.x, dz = b.z - a.z;
+          const t = Math.min(1, Math.max(0, ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz || 1)));
+          const distance = (x - a.x - dx * t) ** 2 + (z - a.z - dz * t) ** 2;
+          if (distance < closest) { closest = distance; altitude = a.y + (b.y - a.y) * t; along = travelled + Math.hypot(dx, b.y - a.y, dz) * t; }
+          travelled += Math.hypot(dx, b.y - a.y, dz);
+        }
+        const ground = groundAt(path, x, z);
+        expect(ground.distance).toBe(Math.sqrt(closest)); expect(ground.along).toBe(along);
+        if (closest < 81) expect(ground.height).toBe(altitude - 1.2);
+      }
+    }
+  });
+});

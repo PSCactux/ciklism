@@ -4,10 +4,11 @@ import { addOutcome, emptyTotals, earned, reward, type Totals } from '../domain/
 import type { Session } from '../domain/session';
 import { emptyRecord, type LapRecord } from '../domain/laps';
 import { emptyBike, sanitizeBike, type BikeSetup } from '../domain/bike';
+import type { RivalLevel } from '../domain/rivals';
 
 interface Profile { totals: Totals; achievements: string[] }
-export interface Settings { calibration: Record<string, number>; motion: boolean; quality: 'auto' | 'high' | 'low'; bike: BikeSetup }
-export const defaultSettings = (): Settings => ({ calibration: {}, motion: true, quality: 'auto', bike: emptyBike() });
+export interface Settings { calibration: Record<string, number>; motion: boolean; quality: 'auto' | 'high' | 'low'; bike: BikeSetup; rivals: RivalLevel }
+export const defaultSettings = (): Settings => ({ calibration: {}, motion: true, quality: 'auto', bike: emptyBike(), rivals: 'even' });
 interface MegaBiciDB extends DBSchema {
   sessions: { key: string; value: Session };
   records: { key: string; value: LapRecord };
@@ -27,6 +28,7 @@ const session = z.object({
     sectors: z.array(sector).max(3) })).max(10000),
   samples: z.array(z.object({ seconds: n, meters: n, speed: n, cadence: n, altitude: z.number().finite() })).max(100000),
   record, xp: n, achievements: z.array(z.string().max(100)).max(100),
+  place: z.number().int().positive().optional(), riders: z.number().int().positive().optional(),
 });
 // Copies exported before the rename carry the old format name and stay importable.
 export const backupSchema = z.object({ format: z.enum(['megabici', 'ciklism']), version: z.literal(1),

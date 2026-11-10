@@ -18,6 +18,8 @@ import { createSky } from './sky';
 import { LIGHTING, lightingKey, lightmapUV, surfaceIrradiance, treeLayout, type Daylight } from './lighting';
 import { pineCrown, forestCrown, grassTuft, meadowClump } from './vegetation';
 import { AdaptiveResolution, frameLimit, type Quality } from './budget';
+import { createRider, type RiderModel } from './riders';
+import { PELOTON } from '../domain/rivals';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
@@ -30,7 +32,7 @@ import '@babylonjs/core/Meshes/thinInstanceMesh';
 import '@babylonjs/core/Materials/standardMaterial';
 import { RoutePath, type Vec3 } from '../domain/route';
 import { cameraPose, type RideState } from '../domain/ride';
-import { distantHill, groundAt, terrainHeightAt, hash, markings, ribbon, roadSurface, roadRepairs, roadHeight, riverRibbon, roadside, shoulderBanks, terrainTiles, TILE_SIZE, type Geometry } from './geometry';
+import { distantHill, groundAt, terrainHeightAt, hash, markings, roadSurface, roadRepairs, roadHeight, riverRibbon, roadside, shoulderBanks, terrainCells, terrainStep, terrainTile, TILE_SIZE, type Geometry } from './geometry';
 
 export type { Daylight } from './lighting';
 export type { Quality } from './budget';
@@ -40,6 +42,14 @@ const PALETTES = {
   atardecer: { sky: '#738ca6', fog: '#d8b9a0', grass: '#b1c38b' },
 };
 const vec = (p: Vec3) => new Vector3(p.x, p.y, p.z);
+/** A piece of scenery shown only near the camera. With `build`, its mesh exists only while it is
+ * near, so memory follows what is in view and not the length of the course. */
+interface Zone {
+  mesh: Mesh | null; build: (() => Mesh) | null; x: number; z: number; radius: number;
+  range: number; minRange: number; distance: number; wanted: boolean; queued: boolean;
+}
+/** Metres past its range a built zone is kept, so turning round does not rebuild it. */
+const ZONE_KEEP = 500;
 
 export class RideScene {
   private engine: Engine;
@@ -52,6 +62,7 @@ export class RideScene {
   private sunlight: DirectionalLight | null = null;
   private waterSurface: WaterSurface | null = null;
   private ghost: TransformNode | null = null;
+  private riders: RiderModel[] = [];
   private cockpitGroup: TransformNode | null = null;
   private path: RoutePath | null = null;
   private bakingRoute: RoutePath | null = null;
@@ -63,7 +74,8 @@ export class RideScene {
   private budget = new AdaptiveResolution();
   private lastPresented = 0;
   private lastFrame = 0;
-  private zones: { mesh: Mesh; x: number; z: number; radius: number; range: number; minRange: number }[] = [];
+  private zones: Zone[] = [];
+  private pending: Zone[] = [];
   private lastZoneX = Infinity;
   private lastZoneZ = Infinity;
   private needsRender = true;
@@ -122,6 +134,7 @@ export class RideScene {
       if (now - this.lastFrame < interval - 1) return;
       this.lastFrame = now;
       this.onFrame(now);
+      if (this.pending.length) this.buildZones(5);
       if (!this.needsRender) { this.budget.idle(); this.lastPresented = 0; return; }
       const started = performance.now();
       this.scene.render();
@@ -198,8 +211,8 @@ export class RideScene {
     this.bakingRoute = path;
     this.daylight = daylight; this.staticMaterials.clear();
     this.waterSurface = null;
-    this.zones = []; this.lastZoneX = Infinity; this.lastZoneZ = Infinity;
-    this.content?.dispose(); this.content = null; this.ghost = null;
+    this.zones = []; this.pending = []; this.lastZoneX = Infinity; this.lastZoneZ = Infinity;
+    this.content?.dispose(); this.content = null; this.ghost = null; this.riders = [];
     for (const mat of this.materials) mat.dispose(false, false);
     this.materials = [];
     this.lightmap?.dispose(); this.lightmap = null;
@@ -259,25 +272,29 @@ export class RideScene {
       material.lightmapTexture = this.lightmap; material.useLightmapAsShadowmap = true;
     }
     for (const material of [grass, shoulder, paint]) this.staticSurface(material);
-    let tileIndex = 0;
-    for (const tile of terrainTiles(path)) {
-      this.zone(this.mesh(`terrain-${tileIndex++}`, tile, grass), 1050);
-      if (tileIndex % 24 === 0) await new Promise(resolve => setTimeout(resolve, 0));
+    for (const cell of terrainCells(path)) {
+      const x = cell.x + TILE_SIZE / 2, z = cell.z + TILE_SIZE / 2;
+      this.lazyZone(x, z, 140, 1050, () => this.mesh('terrain', terrainTile(path, cell.x, cell.z, terrainStep(path, cell.x, cell.z)), grass));
     }
     for (let from = 0; from < path.totalLength; from += TILE_SIZE) {
-      const to = Math.min(path.totalLength, from + TILE_SIZE);
-      this.zone(this.mesh('shoulders', shoulderBanks(path, from, to), shoulder), 850);
-      const surface = roadSurface(path, [-3, -1.5, 0, 1.5, 3], from, to);
-      roadRepairs(path, from, to, surface);
-      this.zone(this.mesh('road', surface, asphalt), 850);
-      const lines = markings(path, from, to);
-      for (const side of [-1, 1]) {
-        const edge = roadSurface(path, [side * 2.76 - 0.05, side * 2.76 + 0.05], from, to, 0.02);
-        const base = lines.positions.length / 3;
-        lines.positions.push(...edge.positions); lines.indices.push(...edge.indices.map(n => n + base));
-        lines.uvs.push(...edge.uvs); lines.colors.push(...edge.colors);
-      }
-      this.zone(this.mesh('paint', lines, paint), 850);
+      const to = Math.min(path.totalLength, from + TILE_SIZE), middle = path.sample((from + to) / 2).position;
+      const radius = (to - from) / 2 + 8;
+      this.lazyZone(middle.x, middle.z, radius, 850, () => this.mesh('shoulders', shoulderBanks(path, from, to), shoulder));
+      this.lazyZone(middle.x, middle.z, radius, 850, () => {
+        const surface = roadSurface(path, [-3, -1.5, 0, 1.5, 3], from, to);
+        roadRepairs(path, from, to, surface);
+        return this.mesh('road', surface, asphalt);
+      });
+      this.lazyZone(middle.x, middle.z, radius, 850, () => {
+        const lines = markings(path, from, to);
+        for (const side of [-1, 1]) {
+          const edge = roadSurface(path, [side * 2.76 - 0.05, side * 2.76 + 0.05], from, to, 0.02);
+          const base = lines.positions.length / 3;
+          lines.positions.push(...edge.positions); lines.indices.push(...edge.indices.map(n => n + base));
+          lines.uvs.push(...edge.uvs); lines.colors.push(...edge.colors);
+        }
+        return this.mesh('paint', lines, paint);
+      });
     }
     onProgress('Plantando el paisaje…');
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -288,10 +305,12 @@ export class RideScene {
     this.roadFurniture(path);
     this.cockpit();
     this.ghost = this.ghostBike();
+    this.peloton();
     this.path = ridePath;
-    this.showPreview(preview);
+    this.showPreview(preview, false);
     this.resize();
     onProgress('Abriendo la vista previa…');
+    await this.settleZones();
     try { await this.prepareVisibleScene(); }
     catch (error) { this.path = null; throw error; }
     this.loadedKey = key;
@@ -387,20 +406,57 @@ export class RideScene {
   }
   private zone(mesh: Mesh, range: number, minRange = 0) {
     const bounds = mesh.getBoundingInfo().boundingSphere;
-    this.zones.push({ mesh, x: bounds.centerWorld.x, z: bounds.centerWorld.z, radius: bounds.radiusWorld, range, minRange });
+    this.zones.push({ mesh, build: null, x: bounds.centerWorld.x, z: bounds.centerWorld.z, radius: bounds.radiusWorld,
+      range, minRange, distance: 0, wanted: true, queued: false });
     return mesh;
   }
-  private updateZones() {
-    const { x, z } = this.camera.position;
+  private lazyZone(x: number, z: number, radius: number, range: number, build: () => Mesh, minRange = 0) {
+    this.zones.push({ mesh: null, build, x, z, radius, range, minRange, distance: 0, wanted: false, queued: false });
+  }
+  private updateZones(x = this.camera.position.x, z = this.camera.position.z) {
     if (Math.hypot(x - this.lastZoneX, z - this.lastZoneZ) < 16) return;
     this.lastZoneX = x; this.lastZoneZ = z;
+    let queued = false;
     for (const zone of this.zones) {
-      const distance = Math.hypot(x - zone.x, z - zone.z);
+      const distance = zone.distance = Math.hypot(x - zone.x, z - zone.z);
       const nearRange = this.quality === 'low' ? 90 : 180;
       const range = zone.range === 180 ? nearRange : zone.range === 28 && this.quality === 'low' ? 18 : zone.range;
       const minRange = zone.minRange === 180 ? nearRange : zone.minRange;
-      zone.mesh.setEnabled(distance < range + zone.radius && (minRange === 0 || distance >= minRange + zone.radius));
+      zone.wanted = distance < range + zone.radius && (minRange === 0 || distance >= minRange + zone.radius);
+      if (zone.mesh) {
+        if (zone.build && !zone.wanted && distance > range + zone.radius + ZONE_KEEP) { zone.mesh.dispose(); zone.mesh = null; }
+        else zone.mesh.setEnabled(zone.wanted);
+      } else if (zone.wanted && !zone.queued) { zone.queued = queued = true; this.pending.push(zone); }
     }
+    // Nearest last: the builder takes zones from the end.
+    if (queued) this.pending.sort((a, b) => b.distance - a.distance);
+  }
+  /** Builds queued zones, nearest first, until the time allowed for this frame runs out. */
+  private buildZones(budgetMs: number) {
+    const started = performance.now();
+    while (this.pending.length) {
+      const zone = this.pending.pop()!;
+      zone.queued = false;
+      if (!zone.wanted || zone.mesh) continue;
+      zone.mesh = zone.build!(); zone.mesh.setEnabled(true);
+      this.needsRender = true;
+      if (performance.now() - started > budgetMs) break;
+    }
+  }
+  private async settleZones() {
+    while (this.pending.length) {
+      this.buildZones(12);
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+  /** Builds the scenery around a point before the camera gets there, e.g. the start line. */
+  async warm(position: Vec3) {
+    if (!this.path) return;
+    const render = this.needsRender;
+    this.lastZoneX = Infinity; this.updateZones(position.x, position.z);
+    await this.settleZones();
+    // The camera has not moved yet: do not present a frame with the old view half switched off.
+    this.needsRender = render;
   }
   private instances(mesh: Mesh, transforms: Matrix[], range = 650, minRange = 0, cellSize = TILE_SIZE) {
     const cells = new Map<string, Matrix[]>();
@@ -409,17 +465,28 @@ export class RideScene {
       if (!cells.has(key)) cells.set(key, []);
       cells.get(key)!.push(transform);
     }
+    const local = mesh.getBoundingInfo().boundingSphere, reach = local.center.length() + local.radius;
+    // The template stays hidden and is cloned per batch while that batch is near.
+    mesh.parent = this.content; mesh.setEnabled(false);
     // Thin-instance matrix attributes belong to the geometry in Babylon. Each
     // spatial batch needs its own geometry to avoid overwriting another batch.
     for (const [key, matrices] of cells) {
-      const part = mesh.clone(`${mesh.name}-${key}`, this.content)!;
-      part.makeGeometryUnique();
       const buffer = new Float32Array(matrices.length * 16);
-      matrices.forEach((m, i) => m.copyToArray(buffer, i * 16));
-      part.thinInstanceSetBuffer('matrix', buffer, 16, true);
-      part.isPickable = false; part.freezeWorldMatrix(); this.zone(part, range, minRange);
+      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity, size = 0;
+      matrices.forEach((m, i) => {
+        m.copyToArray(buffer, i * 16);
+        const v = m.m;
+        minX = Math.min(minX, v[12]); maxX = Math.max(maxX, v[12]); minZ = Math.min(minZ, v[14]); maxZ = Math.max(maxZ, v[14]);
+        size = Math.max(size, Math.hypot(v[0], v[1], v[2]), Math.hypot(v[4], v[5], v[6]), Math.hypot(v[8], v[9], v[10]));
+      });
+      this.lazyZone((minX + maxX) / 2, (minZ + maxZ) / 2, Math.hypot(maxX - minX, maxZ - minZ) / 2 + size * reach, range, () => {
+        const part = mesh.clone(`${mesh.name}-${key}`, this.content)!;
+        part.makeGeometryUnique();
+        part.thinInstanceSetBuffer('matrix', buffer, 16, true);
+        part.isPickable = false; part.freezeWorldMatrix();
+        return part;
+      }, minRange);
     }
-    mesh.dispose();
   }
   private trees(path: RoutePath) {
     const bark = this.material('bark', '#b6afa0'); bark.diffuseTexture = this.photo('bark_diff', 1);
@@ -502,8 +569,8 @@ export class RideScene {
         this.lakeBanks(path);
       } else {
         for (let from = 0; from < path.totalLength; from += TILE_SIZE) {
-          this.zone(this.mesh('river-water', riverRibbon(path, from,
-            Math.min(from + TILE_SIZE, path.totalLength)), water), 1250);
+          const to = Math.min(from + TILE_SIZE, path.totalLength), bank = roadside(path, (from + to) / 2, riverProfile((from + to) / 2).center);
+          this.lazyZone(bank.x, bank.z, (to - from) / 2 + 30, 1250, () => this.mesh('river-water', riverRibbon(path, from, to), water));
         }
         this.riverBanks(path);
       }
@@ -665,7 +732,31 @@ export class RideScene {
     }
     group.setEnabled(false); return group;
   }
-  showPreview(view?: PreviewView) {
+  private peloton() {
+    const cloth = this.material('rider', '#ffffff'); cloth.specularColor.set(0.1, 0.1, 0.1); cloth.specularPower = 24;
+    const shadow = this.material('rider-shadow', '#000000');
+    shadow.disableLighting = true; shadow.backFaceCulling = false; shadow.zOffset = -2;
+    this.riders = PELOTON.map((rival, index) => {
+      const rider = createRider(this.scene, rival, index, this.content!, cloth, shadow);
+      rider.root.setEnabled(false); return rider;
+    });
+  }
+  private updateRiders(state: RideState) {
+    const camera = this.camera.position;
+    for (const [index, rider] of this.riders.entries()) {
+      const rival = state.rivals[index];
+      if (!rival || rival.finished) { rider.root.setEnabled(false); continue; }
+      const sample = this.path!.sample(rival.distance), p = roadside(this.path!, rival.distance, rival.rival.lane);
+      const visible = Math.hypot(p.x - camera.x, p.z - camera.z) < 420;
+      rider.root.setEnabled(visible);
+      if (!visible) continue;
+      rider.root.position.set(p.x, p.y + roadHeight(rival.rival.lane), p.z);
+      rider.root.rotation.set(-Math.atan(sample.slope), Math.atan2(sample.forward.x, sample.forward.z),
+        this.motion ? 0.035 * Math.sin(rival.crankAngle) : 0);
+      rider.pose(rival.crankAngle);
+    }
+  }
+  showPreview(view?: PreviewView, build = true) {
     if (!this.path) return;
     if (this.waterSurface) this.waterSurface.phase = 0;
     const pose = previewPose(this.path, view);
@@ -674,7 +765,10 @@ export class RideScene {
     // near plane keeps asphalt, shoulders and paint from z-fighting in the distance.
     this.camera.minZ = 2; this.camera.fov = 0.9; this.camera.setTarget(vec(pose.target));
     this.cockpitGroup?.setEnabled(false); this.ghost?.setEnabled(false);
-    this.lastZoneX = Infinity; this.updateZones(); this.needsRender = true;
+    for (const rider of this.riders) rider.root.setEnabled(false);
+    this.lastZoneX = Infinity; this.updateZones();
+    if (build) this.buildZones(Infinity);
+    this.needsRender = true;
     this.canvas.dataset.view = 'preview';
   }
   update(state: RideState) {
@@ -687,6 +781,7 @@ export class RideScene {
     this.camera.position.copyFrom(vec(pose.eye)); this.camera.upVector.copyFrom(vec(pose.up));
     this.camera.setTarget(vec(pose.target));
     this.updateZones();
+    this.updateRiders(state);
     if (this.ghost) {
       const visible = state.ghostDistance !== null && Math.abs(state.ghostDistance - state.distance) > 2;
       this.ghost.setEnabled(visible);

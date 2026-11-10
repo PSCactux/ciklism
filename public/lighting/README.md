@@ -1,6 +1,6 @@
 # Baked lighting
 
-Shadow and contact-occlusion maps generated locally for the six routes and the
+Shadow and contact-occlusion maps generated locally for the nine routes and the
 three times of day. The crown silhouettes come from `textures/pine-tree.webp`
 and `textures/valley-trees.webp`; the recipe is project code.
 
@@ -10,6 +10,7 @@ and the unit tests fail if a map is missing or stale. When the baker recipe or
 tree placement changes, bump `version` in `lightingKey`.
 
 To regenerate (Node 22.12+): start `npm run dev`, then run `npm run bake:lighting`.
+Only missing or stale maps are baked; add `-- --all` to redo every one.
 It needs Playwright's Chromium or `MEGABICI_CHROME_PATH`. The baker replaces the
 manifest once every route is done and only removes files the old manifest listed.
 

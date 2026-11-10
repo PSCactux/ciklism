@@ -1,6 +1,7 @@
 import { add, clamp, normalize, RoutePath, scale, type Vec3 } from './route';
 import { LapTimer, type LapRecord } from './laps';
 import { LevelGuide } from './bike';
+import type { Peloton, RivalState, Standing } from './rivals';
 
 export const GEARS = [2.6, 3.2, 3.9, 4.7, 5.6, 6.5, 7.4, 8.3, 9.2];
 export interface RideState {
@@ -10,6 +11,7 @@ export interface RideState {
   lapSeconds: number; climbMeters: number; finished: boolean;
   /** Level the course is asking for, when the rider's own bike levels follow the slope. */
   routeGear: number | null;
+  rivals: readonly RivalState[]; standing: Standing | null;
   ghostDistance: number | null; deltaSeconds: number | null;
 }
 export function coastAcceleration(speed: number, slope: number) {
@@ -36,6 +38,7 @@ export class RideEngine {
   private previousY: number;
   private readonly gears: number[];
   private readonly guide: LevelGuide | null;
+  private peloton: Peloton | null = null;
   state: RideState;
 
   /** `gears` are metres per crank turn: the built-in set, or the levels registered on the rider's bike. */
@@ -49,6 +52,8 @@ export class RideEngine {
     this.state = this.snapshot();
   }
   get gearCount() { return this.gears.length; }
+  /** Rivals share the ride's clock: they stop when it is paused and when the rider finishes. */
+  race(peloton: Peloton) { this.peloton = peloton; this.state = this.snapshot(); }
   setCalibration(factor: number) { if (Number.isFinite(factor)) this.factor = clamp(factor, 0.4, 2.5); }
   setRatio(gear: number, metersPerRev: number) { if (gear in this.gears && metersPerRev > 0) this.gears[gear] = metersPerRev; }
   shift(steps: number) { this.gear = clamp(this.gear + Math.trunc(steps), 0, this.gears.length - 1); }
@@ -82,6 +87,7 @@ export class RideEngine {
     this.travelled += advance;
     this.distance += advance;
     this.crank = (this.crank + this.cadence / 60 * Math.PI * 2 * duration) % (Math.PI * 2);
+    this.peloton?.tick(duration);
     if (this.path.isCircuit && this.distance >= this.path.totalLength) {
       const crossingTime = beforeTime + duration * (this.path.totalLength - beforeDistance) / advance;
       this.timer.complete(crossingTime - this.lapStarted);
@@ -106,6 +112,7 @@ export class RideEngine {
       crankAngle: this.crank, gear: this.gear, lap: this.timer.laps.length + 1, lapSeconds,
       climbMeters: this.climb, finished: !this.path.isCircuit && this.distance >= this.path.totalLength,
       routeGear: this.guide?.level ?? null,
+      rivals: this.peloton?.riders ?? [], standing: this.peloton?.standing(this.travelled) ?? null,
       ghostDistance: this.path.isCircuit ? this.timer.ghostDistance(lapSeconds) : null,
       deltaSeconds: this.path.isCircuit ? this.timer.delta(this.distance, lapSeconds) : null };
   }

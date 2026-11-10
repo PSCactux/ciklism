@@ -17,7 +17,8 @@ The interface is in Spanish. Code, comments and docs are in English.
 
 ## Features
 
-- Six routes from 1 to 20 km (circuits and point-to-point), each rideable in reverse and at three times of day.
+- Nine routes from 1 to 60 km (circuits and point-to-point), each rideable in reverse and at three times of day.
+- Eleven rivals start with you. Their pace follows your own recent rides with a sensor, so there is always a wheel to chase and one to hold off; the HUD shows your place and the nearest gaps.
 - First-person camera with handlebar, crank-driven sway, terrain, forest, river, lake and reservoir.
 - Bluetooth Cycling Speed and Cadence (CSC) sensors. Browsers use Web Bluetooth; the iOS and Android apps use the native BLE plugin. Includes bounded automatic reconnection and a manual reconnect.
 - Calibration mode: a live sensor check (signal light, cadence, crank-turn counter), speed matched to the bike's own display, and the bike's resistance levels registered one by one. Rides then use those levels instead of the nine built-in gears, and the course can ask for a level as the slope changes.
@@ -79,7 +80,8 @@ return rpm <= 250 ? rpm : null;
 
 - Terrain is generated only in a corridor around the road. Tiles share their boundary vertices, so different resolutions never crack at the seams.
 - Trees are instanced photographic cutouts.
-- Static shadows are **baked offline** into 18 small WebP lightmaps (6 routes × 3 times of day). Map names carry a fingerprint of the route and of the bake recipe, and a unit test fails if any map is stale. At runtime there is no shadow pass: shadows cost one texture lookup.
+- Scenery is built only around the rider and released behind them, so memory and loading time do not grow with the length of the course.
+- Static shadows are **baked offline** into 27 small WebP lightmaps (9 routes × 3 times of day). Map names carry a fingerprint of the route and of the bake recipe, and a unit test fails if any map is stale. At runtime there is no shadow pass: shadows cost one texture lookup.
 - Presentation is capped and resolution adapts to missed frames. Preview and pause render only when something changes.
 
 **Platform boundaries.** `src/domain` has no Babylon or Capacitor imports. Its tests cover the CSC parser, gears, coasting, frame-rate independence, laps and ghosts, rewards and backup validation. `src/platform/cadence.ts` wraps the Capacitor BLE plugin, which uses Web Bluetooth in the browser and native BLE in the apps. Tests run that wrapper against a fake client to check subscription, reconnection and cancellation. The same bundle runs in a browser tab or inside the native shells.
@@ -94,7 +96,7 @@ return rpm <= 250 ? rpm : null;
 | `src/routes` | Route JSON files and the catalogue |
 | `src/ui`, `src/main.ts` | Responsive UI and session orchestration |
 | `public/` | Textures, baked lightmaps and fonts (with their licenses) |
-| `scripts/` | Lighting baker, benchmarks, visual review and asset preparation scripts |
+| `scripts/` | Long-course generator, lighting baker, benchmarks, visual review and asset preparation scripts |
 | `tests/` | Vitest unit tests and Playwright end-to-end tests |
 | `ios/`, `android/` | Capacitor containers; both load the same `dist/` |
 | `pedal-ios/` | Companion iPhone app that emits cadence over Bluetooth |

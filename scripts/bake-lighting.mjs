@@ -16,6 +16,10 @@ try {
   });
   const manifest = {};
   for (const job of jobs) {
+    // The key is a fingerprint of route and recipe: a map that already has it is still current.
+    const key = await page.evaluate(async ({ route, daylight }) =>
+      (await import('/src/render/lighting.ts')).lightingKey(route, daylight), job);
+    if (previous[key] && !process.argv.includes('--all')) { manifest[key] = previous[key]; continue; }
     const result = await page.evaluate(async ({ route, daylight }) => {
       const { bakeLighting } = await import('/scripts/bake-lighting.ts');
       const { lightingKey, lightmapBounds } = await import('/src/render/lighting.ts');

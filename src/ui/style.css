@@ -437,3 +437,19 @@ dialog[data-view=calibration] { width: min(720px,calc(100% - 40px)); }
 }
 @media(max-width:360px) { .brand { font-size: 20px; }.brand svg { width: 23px; }.app-header nav button { padding-inline: 5px; }.app-header { gap: 6px; } }
 @media(max-width:340px) { .brand>span { display: none; } }
+/* Rivals: the rider's place and the nearest wheel ahead and behind. */
+.standings { display: grid; gap: 8px; padding: 12px; background: #14251ee0; border: 1px solid #ffffff20; border-radius: 12px; color: #e0ecd3; }
+.standing-place { display: flex; align-items: baseline; gap: 6px; }
+.standing-place strong { font-size: 30px; line-height: 1; font-weight: 600; letter-spacing: -1px; color: var(--lime); font-variant-numeric: tabular-nums; }
+.standing-place span { font-size: 10px; color: #c3d0b9; }
+.standing-gap { display: grid; gap: 2px; padding-top: 7px; border-top: 1px solid #ffffff1c; font-size: 11px; }
+.standing-gap small { font-size: 8px; font-weight: 600; letter-spacing: .9px; color: #a9bb9e; }
+.standing-gap span { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.standing-gap i { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; border: 1px solid #ffffff66; }
+.standing-gap b { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
+.summary-place { margin-top: 8px; color: var(--ink) !important; font-size: 13px !important; }
+@media(max-width:760px) {
+  .standings { width: 112px; padding: 9px; gap: 6px; }.standing-place strong { font-size: 24px; }
+  .standing-gap { font-size: 10px; padding-top: 5px; }.standing-gap small { font-size: 7px; }
+}
+@media(max-height:550px) and (orientation:landscape) { .standings { padding: 7px 9px; gap: 4px; }.standing-place strong { font-size: 20px; }.standing-gap small { display: none; }.standing-gap { padding-top: 4px; font-size: 10px; } }

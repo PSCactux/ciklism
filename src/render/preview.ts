@@ -10,6 +10,9 @@ export const ROUTE_PREVIEWS: Record<string, PreviewView> = {
   puerto: { fraction: 0.56, height: 52, behind: 95, side: 55, ahead: 85 },
   embalse: { fraction: 0.9, height: 90, behind: 110, side: 140, ahead: 140, lakeFocus: true },
   ermita: { fraction: 0.72, height: 48, behind: 90, side: 55, ahead: 100 },
+  gran_vuelta: { fraction: 0.72, height: 50, behind: 95, side: 55, ahead: 110 },
+  valle_largo: { fraction: 0.3, height: 68, behind: 95, side: -44, ahead: 215 },
+  gran_fondo: { fraction: 0.42, height: 55, behind: 95, side: 55, ahead: 95 },
 };
 const FALLBACK = { fraction: 0.35, height: 90, behind: 120, side: -80, ahead: 90 };
 
