@@ -60,7 +60,7 @@ test('route selection, direction, daylight and unsupported Bluetooth remain usab
   await expect(page.getByRole('button', { name: 'Sentido inverso' })).toBeVisible();
   await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
   expect(maps.at(-1)).toBe(selectedMap);
-  await page.getByLabel('Hora del día').selectOption('atardecer');
+  await page.getByRole('group', { name: 'Hora del día' }).getByRole('button', { name: 'Atardecer' }).click();
   await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
   expect(maps.at(-1)).not.toBe(selectedMap);
   await page.getByRole('button', { name: 'Mi sensor', exact: true }).click();

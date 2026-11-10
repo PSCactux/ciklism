@@ -9,8 +9,14 @@ export class LimestoneSurface extends MaterialPluginBase {
   constructor(material: StandardMaterial) { super(material, 'limestone-surface', 200, {}, true, true); }
   getClassName() { return 'LimestoneSurface'; }
   getCustomCode(shaderType: string) {
-    return shaderType === 'fragment' ? { CUSTOM_FRAGMENT_UPDATE_ALPHA:
-      'baseColor.rgb = vec3(0.60) + mix(vec3(dot(baseColor.rgb, vec3(0.2126, 0.7152, 0.0722))), baseColor.rgb, 0.12) * 0.35;' } : null;
+    // The stone comes from the texture alone; vertex colours then light it and tint it grass, rock or snow.
+    return shaderType === 'fragment' ? { CUSTOM_FRAGMENT_UPDATE_ALPHA: `
+      #ifdef VERTEXCOLOR
+        vec3 stoneTexel = texture2D(diffuseSampler, vDiffuseUV).rgb;
+        baseColor.rgb = (vec3(0.60) + mix(vec3(dot(stoneTexel, vec3(0.2126, 0.7152, 0.0722))), stoneTexel, 0.12) * 0.35) * vColor.rgb;
+      #else
+        baseColor.rgb = vec3(0.60) + mix(vec3(dot(baseColor.rgb, vec3(0.2126, 0.7152, 0.0722))), baseColor.rgb, 0.12) * 0.35;
+      #endif` } : null;
   }
 }
 

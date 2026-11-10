@@ -35,12 +35,12 @@ import '@babylonjs/core/Meshes/thinInstanceMesh';
 import '@babylonjs/core/Materials/standardMaterial';
 import { RoutePath, type Vec3 } from '../domain/route';
 import { bendLean, cameraPose, type RideState } from '../domain/ride';
-import { distantHill, groundAt, terrainHeightAt, hash, markings, roadSurface, roadRepairs, roadHeight, riverRibbon, roadside, shoulderBanks, terrainCells, terrainStep, terrainTile, TILE_SIZE, type Geometry } from './geometry';
+import { distantHill, groundAt, groundNoise, terrainHeightAt, hash, markings, roadSurface, roadRepairs, roadHeight, riverRibbon, roadside, shoulderBanks, terrainCells, terrainStep, terrainTile, TILE_SIZE, type Geometry } from './geometry';
 
 export type { Daylight } from './lighting';
 export type { Quality } from './budget';
 const PALETTES = {
-  dia: { sky: '#598dc0', fog: '#c0cdd0', grass: '#94c28a' },
+  dia: { sky: '#598dc0', fog: '#b9cad6', grass: '#94c28a' },
   amanecer: { sky: '#7f9daf', fog: '#d8bda9', grass: '#abc89b' },
   atardecer: { sky: '#738ca6', fog: '#d8b9a0', grass: '#b1c38b' },
 };
@@ -227,7 +227,7 @@ export class RideScene {
     for (const light of [...this.scene.lights]) light.dispose();
     this.content = new TransformNode('route', this.scene);
     const palette = PALETTES[daylight], lighting = LIGHTING[daylight];
-    this.scene.fogDensity = path.route.scenery === 'river' ? 0.00072 : 0.00125;
+    this.scene.fogDensity = path.route.scenery === 'river' ? 0.00072 : 0.00105;
     this.scene.imageProcessingConfiguration.exposure = daylight === 'dia' ? 1.6 : 2.0;
     onProgress('Cargando la iluminación preparada…');
     this.lightmap = await new Promise<Texture>((resolve, reject) => {
@@ -472,13 +472,15 @@ export class RideScene {
     // The camera has not moved yet: do not present a frame with the old view half switched off.
     this.needsRender = render;
   }
-  private instances(mesh: Mesh, transforms: Matrix[], range = 650, minRange = 0, cellSize = TILE_SIZE) {
-    const cells = new Map<string, Matrix[]>();
-    for (const transform of transforms) {
+  /** `tints` holds four colour values per transform; each instance is multiplied by its own. */
+  private instances(mesh: Mesh, transforms: Matrix[], range = 650, minRange = 0, cellSize = TILE_SIZE, tints?: number[]) {
+    const cells = new Map<string, Matrix[]>(), shades = new Map<string, number[]>();
+    transforms.forEach((transform, n) => {
       const key = `${Math.floor(transform.m[12] / cellSize)},${Math.floor(transform.m[14] / cellSize)}`;
-      if (!cells.has(key)) cells.set(key, []);
+      if (!cells.has(key)) { cells.set(key, []); shades.set(key, []); }
       cells.get(key)!.push(transform);
-    }
+      if (tints) shades.get(key)!.push(...tints.slice(n * 4, n * 4 + 4));
+    });
     const local = mesh.getBoundingInfo().boundingSphere, reach = local.center.length() + local.radius;
     // The template stays hidden and is cloned per batch while that batch is near.
     mesh.parent = this.content; mesh.setEnabled(false);
@@ -493,10 +495,12 @@ export class RideScene {
         minX = Math.min(minX, v[12]); maxX = Math.max(maxX, v[12]); minZ = Math.min(minZ, v[14]); maxZ = Math.max(maxZ, v[14]);
         size = Math.max(size, Math.hypot(v[0], v[1], v[2]), Math.hypot(v[4], v[5], v[6]), Math.hypot(v[8], v[9], v[10]));
       });
+      const colors = new Float32Array(shades.get(key)!);
       this.lazyZone((minX + maxX) / 2, (minZ + maxZ) / 2, Math.hypot(maxX - minX, maxZ - minZ) / 2 + size * reach, range, () => {
         const part = mesh.clone(`${mesh.name}-${key}`, this.content)!;
         part.makeGeometryUnique();
         part.thinInstanceSetBuffer('matrix', buffer, 16, true);
+        if (tints) part.thinInstanceSetBuffer('color', colors, 4, true);
         part.isPickable = false; part.freezeWorldMatrix();
         return part;
       }, minRange);
@@ -505,32 +509,67 @@ export class RideScene {
   private trees(path: RoutePath, towns: Village[]) {
     const houses = towns.flatMap(town => town.houses);
     const bark = this.material('bark', '#b6afa0'); bark.diffuseTexture = this.photo('bark_diff', 1);
-    const leaves = this.material('pine-needles', '#edf0d1');
     const river = path.route.scenery === 'river';
-    leaves.diffuseTexture = this.photo(river ? 'valley-trees' : 'pine-tree'); leaves.diffuseTexture.hasAlpha = true;
-    leaves.useAlphaFromDiffuseTexture = true;
-    leaves.transparencyMode = StandardMaterial.MATERIAL_ALPHATEST; leaves.alphaCutOff = 0.4;
-    leaves.backFaceCulling = false; leaves.twoSidedLighting = true;
-    // The cutout already contains soft lighting. Relighting each crossed plane
-    // separately exposes its flat shape and makes back-facing foliage black.
-    leaves.disableLighting = true;
-    leaves.emissiveColor = this.sunlight!.diffuse.scale(0.9);
-    const trunks: Matrix[] = [], crowns: Matrix[] = [], alders: Matrix[] = [];
+    const foliage = (name: string, photo: string) => {
+      const leaves = this.material(name, '#edf0d1');
+      leaves.diffuseTexture = this.photo(photo); leaves.diffuseTexture.hasAlpha = true;
+      leaves.useAlphaFromDiffuseTexture = true;
+      leaves.transparencyMode = StandardMaterial.MATERIAL_ALPHATEST; leaves.alphaCutOff = 0.4;
+      leaves.backFaceCulling = false; leaves.twoSidedLighting = true;
+      // The cutout already contains soft lighting. Relighting each crossed plane
+      // separately exposes its flat shape and makes back-facing foliage black.
+      leaves.disableLighting = true;
+      leaves.emissiveColor = this.sunlight!.diffuse.scale(0.9);
+      return leaves;
+    };
+    const kinds = { pine: { matrices: [] as Matrix[], tints: [] as number[] }, spruce: { matrices: [] as Matrix[], tints: [] as number[] },
+      alder: { matrices: [] as Matrix[], tints: [] as number[] } };
+    const trunks: Matrix[] = [];
+    // No two trees are quite the same green: some darker, some yellower, a few already turning.
+    const tinted = (x: number, z: number, into: number[]) => {
+      const n = Math.imul(Math.round(x * 3), 73856093) ^ Math.imul(Math.round(z * 3), 19349663);
+      const light = 0.78 + hash(n, 61) * 0.3, warm = (hash(n, 62) - 0.45) * 0.2, turning = hash(n, 63) > 0.94 ? 0.22 : 0;
+      into.push(light * (1 + warm + turning), light * (1 - turning * 0.25), light * (1 - warm * 0.8 - turning), 1);
+    };
     for (const tree of treeLayout(path.route)) {
       // The baked shade of a tree that gives way to a house simply reads as the house's own.
       if (houses.some(house => Math.hypot(house.x - tree.x, house.z - tree.z) < 9)) continue;
       const h = tree.height;
       const q = Quaternion.RotationYawPitchRoll(tree.yaw, tree.lean, 0);
       trunks.push(Matrix.Compose(new Vector3(h * 0.035, h * 0.27, h * 0.035), q, new Vector3(tree.x, tree.y + h * 0.135, tree.z)));
-      (tree.kind === 'alder' ? alders : crowns).push(Matrix.Compose(new Vector3(h, h, h), q, new Vector3(tree.x, tree.y, tree.z)));
+      kinds[tree.kind].matrices.push(Matrix.Compose(new Vector3(h, h, h), q, new Vector3(tree.x, tree.y, tree.z)));
+      tinted(tree.x, tree.z, kinds[tree.kind].tints);
+    }
+    // Undergrowth: low bushes fill the ground between the road and the trees. They cast no baked shade.
+    const bushes = { matrices: [] as Matrix[], tints: [] as number[] }, lake = lakeFor(path.route);
+    const cover = { meadow: 0.3, lake: 0.4, river: 0.45, alpine: 0.12, reservoir: 0.2, chapel: 0.22 }[path.route.scenery ?? 'meadow'];
+    for (let i = 0, d = 0; d < path.totalLength; i++, d += 9) for (const side of [-1, 1]) for (let n = 0; n < 2; n++) {
+      const seed = i * 23 + side + n * 4099;
+      if (hash(seed, 801) > cover) continue;
+      const p = roadside(path, d + hash(seed, 802) * 9, side * (7 + hash(seed, 803) ** 1.6 * 60));
+      if (groundNoise(p.x, p.z, 230, 77) < 0.3 || houses.some(house => Math.hypot(house.x - p.x, house.z - p.z) < 9)) continue;
+      const ground = groundAt(path, p.x, p.z);
+      if (ground.distance < 6.5 || (lake && lakeRadius(lake, p.x, p.z) < 1.18)) continue;
+      if (river) { const bed = riverProfile(ground.along); if (Math.abs(ground.lateral - bed.center) < bed.halfWidth + 5) continue; }
+      const h = 1.3 + hash(seed, 804) * 2.2;
+      bushes.matrices.push(Matrix.Compose(new Vector3(h * 1.5, h, h * 1.5), Quaternion.RotationYawPitchRoll(hash(seed, 805) * 6.28, 0, 0),
+        new Vector3(p.x, terrainHeightAt(path, p.x, p.z) - h * 0.12, p.z)));
+      tinted(p.x, p.z, bushes.tints);
     }
     const trunk = CreateCylinder('trunks', { height: 1, diameterBottom: 1, diameterTop: 0.08, tessellation: 7 }, this.scene);
     trunk.material = bark; this.instances(trunk, trunks, 180);
-    this.instances(this.mesh('pine-near', river ? forestCrown(true, 'spruce') : pineCrown(true), leaves), crowns, 180);
-    this.instances(this.mesh('pine-far', river ? forestCrown(false, 'spruce') : pineCrown(false), leaves), crowns, river ? 1100 : 650, 180);
-    if (river) {
-      this.instances(this.mesh('alder-near', forestCrown(true, 'alder'), leaves), alders, 180);
-      this.instances(this.mesh('alder-far', forestCrown(false, 'alder'), leaves), alders, 1100, 180);
+    const far = river ? 1100 : 800;
+    const plant = (name: string, crown: (detailed: boolean) => Geometry, leaves: StandardMaterial, group: { matrices: Matrix[]; tints: number[] }) => {
+      if (!group.matrices.length) return;
+      this.instances(this.mesh(`${name}-near`, crown(true), leaves), group.matrices, 180, 0, TILE_SIZE, group.tints);
+      this.instances(this.mesh(`${name}-far`, crown(false), leaves), group.matrices, far, 180, TILE_SIZE, group.tints);
+    };
+    if (kinds.pine.matrices.length) plant('pine', pineCrown, foliage('pine-needles', 'pine-tree'), kinds.pine);
+    if (kinds.spruce.matrices.length || kinds.alder.matrices.length || bushes.matrices.length) {
+      const broadleaf = foliage('valley-leaves', 'valley-trees');
+      plant('spruce', detailed => forestCrown(detailed, 'spruce'), broadleaf, kinds.spruce);
+      plant('alder', detailed => forestCrown(detailed, 'alder'), broadleaf, kinds.alder);
+      if (bushes.matrices.length) this.instances(this.mesh('bushes', forestCrown(false, 'alder'), broadleaf), bushes.matrices, 300, 0, TILE_SIZE, bushes.tints);
     }
   }
   private verges(path: RoutePath) {

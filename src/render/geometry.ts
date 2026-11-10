@@ -129,9 +129,14 @@ export function groundAt(path: RoutePath, x: number, z: number) {
     }
   }
   closest = Math.sqrt(closest);
-  const blend = Math.min(1, Math.max(0, (closest - 9) / 100));
-  let height = altitude - 1.2 + blend * landscape(path.route).relief *
-    (8 + Math.sin(x / 110 + z / 170) * 10 + Math.sin(z / 230 - x / 160) * 10);
+  const blend = Math.min(1, Math.max(0, (closest - 9) / 100)), biome = landscape(path.route);
+  // Broad swells, smaller folds and fine bumps. They grow in gently from the road, so its verges stay calm.
+  const rolling = (groundNoise(x, z, 430, 3) - 0.5) * 44 + (groundNoise(x, z, 160, 7) - 0.5) * 16 + (groundNoise(x, z, 52, 11) - 0.5) * 4.5;
+  // Further out the land climbs into the hills or mountains that close the view.
+  const far = Math.min(1, Math.max(0, (closest - 130) / 380));
+  let height = altitude - 1.2 + blend * biome.relief *
+    (8 + Math.sin(x / 110 + z / 170) * 10 + Math.sin(z / 230 - x / 160) * 10 + blend * rolling) +
+    far * far * biome.rise * (0.45 + groundNoise(x, z, 700, 5) * 0.9);
   const lake = lakeFor(path.route);
   if (lake && closest > 14) {
     const radius = lakeRadius(lake, x, z);
@@ -152,7 +157,29 @@ export function groundAt(path: RoutePath, x: number, z: number) {
     const smoothBank = bank * bank * (3 - 2 * bank);
     if (edge < 6) height = altitude - 5.1 + smoothBank * (height - altitude + 5.1);
   }
-  return { height, distance: closest, lateral, along };
+  return { height, distance: closest, lateral, along, road: altitude };
+}
+
+const CROPS: [number, number, number][] = [[1.42, 1.17, 0.6], [1.08, 0.8, 0.58], [0.8, 1.1, 0.64], [1.26, 1.2, 0.86]];
+/** Colour of the land at a point, as a multiplier of the ground texture: a patchwork of crops on
+ * gentle farmland, bare rock where it is steep and, in the mountains, grass low down and snow on top. */
+export function terrainTint(path: RoutePath, x: number, z: number, ground: { height: number; distance: number; road: number }, steep: number) {
+  const scenery = path.route.scenery ?? 'meadow', biome = landscape(path.route), tint = [1, 1, 1];
+  const mix = (to: number[], k: number) => { for (let i = 0; i < 3; i++) tint[i] += (to[i] - tint[i]) * k; };
+  const gentle = Math.min(1, Math.max(0, (0.2 - steep) / 0.08)) * Math.min(1, Math.max(0, (ground.distance - 24) / 20));
+  if (biome.farms && gentle) {
+    // Fields are long rectangles, all lying the same way, each sown with one thing.
+    const u = Math.floor((x * 0.825 + z * 0.565) / 150), v = Math.floor((z * 0.825 - x * 0.565) / 95);
+    const plot = hash(Math.imul(u, 73856093) ^ Math.imul(v, 19349663), 41);
+    if (plot < biome.farms * 0.7) mix(CROPS[Math.floor(plot / (biome.farms * 0.7) * CROPS.length)], gentle * 0.9);
+  }
+  const above = ground.height - ground.road;
+  if (scenery === 'alpine') {
+    mix([0.72, 0.98, 0.56], Math.min(1, Math.max(0, (0.3 - steep) / 0.12)) * Math.min(1, Math.max(0, (70 - above) / 50)) * Math.min(1, ground.distance / 30) * 0.8);
+    mix([0.74, 0.7, 0.68], Math.min(1, Math.max(0, (steep - 0.5) / 0.3)) * 0.8);
+    mix([1.75, 1.8, 1.86], Math.min(1, Math.max(0, (above - 150 - groundNoise(x, z, 90, 31) * 50) / 45)));
+  } else if (scenery !== 'river') mix([1.12, 0.92, 0.8], Math.min(1, Math.max(0, (steep - 0.42) / 0.3)) * 0.75);
+  return tint;
 }
 
 export function riverRibbon(path: RoutePath, from: number, to: number): Geometry {
@@ -251,8 +278,8 @@ export function terrainTile(path: RoutePath, x: number, z: number, step: number)
     data.normals!.push(nx / length, 2 / length, nz / length);
     data.uvs.push(px / 8, pz / 8);
     const shade = 0.62 + groundNoise(px, pz, 67, 9) * 0.32 + groundNoise(px, pz, 19, 25) * 0.14;
-    const dry = groundNoise(px, pz, 35, 51) * 0.08;
-    data.colors.push(shade * (1 + dry), shade, shade * (1.02 - dry), 1);
+    const dry = groundNoise(px, pz, 35, 51) * 0.08, tint = terrainTint(path, px, pz, ground, Math.hypot(nx, nz) / 2);
+    data.colors.push(shade * (1 + dry) * tint[0], shade * tint[1], shade * (1.02 - dry) * tint[2], 1);
     return index;
   };
   const cache = new Map<string, number>();

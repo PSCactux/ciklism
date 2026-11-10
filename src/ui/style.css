@@ -480,3 +480,55 @@ dialog[data-view=calibration] { width: min(720px,calc(100% - 40px)); }
 .bike-edit label { font-weight: 600; }
 .bike-edit input { flex: 1; min-width: 140px; min-height: 42px; padding: 8px 12px; border: 1px solid #ced8c6; border-radius: 9px; background: #fff; color: var(--ink); font: inherit; }
 .bike-edit .text-button { margin: 0; text-decoration: underline; }
+/* Home: the landscape fills the screen and the route list and launch card float over it. */
+.week { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 16px; padding: 14px; border-radius: 12px; background: #eaf0e2; }
+.week>div { display: grid; gap: 3px; }
+.week strong { font-size: 21px; font-weight: 600; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
+.week span { font-size: 10px; color: #5c6f55; }
+.route-spark { display: block; width: 100%; max-width: 150px; height: 18px; margin-top: 2px; }
+.route-spark polygon { fill: #cfdfbb; }
+.route-spark polyline { fill: none; stroke: #6f9150; stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.selected .route-spark polygon { fill: #bcd49f; }
+.route-best { display: grid; gap: 3px; justify-items: end; flex-shrink: 0; text-align: right; }
+.route-best small { font-size: 8px; font-weight: 600; letter-spacing: .8px; color: #7d8a73; }
+.route-best b { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; color: #355c32; }
+.route-info>span:last-of-type { font-size: 11px; color: #697760; }
+.segmented.light button { padding-inline: 11px; }
+.setup-profile { margin-top: 16px; }
+.setup-profile .elevation { height: 54px; }
+.setup-profile .elevation polygon { fill: #dfe9d0; }
+.setup-profile .elevation .climb { fill: #f1c98a; }
+.setup-profile .elevation polyline { stroke: #5e8347; stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.setup-profile .elevation line { display: none; }
+.setup-profile>div { display: flex; justify-content: space-between; gap: 10px; margin-top: 5px; font-size: 10px; color: #6b7a62; }
+.route-facts { flex-wrap: wrap; }
+#interface { z-index: 21; }
+@media(min-width:761px) {
+  :root { --header: calc(68px + env(safe-area-inset-top)); }
+  .home-layout { position: relative; display: block; height: calc(100dvh - var(--header)); min-height: 620px; padding: 0; overflow: hidden; }
+  .route-preview { position: absolute; inset: 0; height: auto; min-height: 0; border-radius: 0; padding: 22px 26px 22px 426px; }
+  #world,#loading { border-radius: 0; }
+  body:not(.riding) #loading { padding-left: 400px; }
+  .route-panel { position: absolute; z-index: 2; left: 20px; top: 20px; bottom: 20px; width: 386px; max-height: none; padding: 24px 18px 12px; overflow: auto;
+    background: #fbfcf8f7; border: 1px solid #ffffffb0; border-radius: 20px; box-shadow: 0 18px 60px #0b1f1640; }
+  .route-panel h1 { font-size: 36px; margin-top: 12px; }
+  .section-heading { margin: 22px 0 12px; }
+  .ride-setup { max-width: 900px; box-shadow: 0 18px 60px #0b1f1640; }
+  .preview-title h2 { font-size: clamp(30px,3.2vw,50px); }
+}
+@media(min-width:761px) and (max-width:1100px) {
+  .route-panel { width: 300px; left: 14px; top: 14px; bottom: 14px; padding: 18px 12px 10px; }
+  .route-preview { padding: 16px 16px 16px 328px; }
+  body:not(.riding) #loading { padding-left: 314px; }
+  .route-panel h1 { font-size: 30px; }.route-best { display: none; }
+  .route-facts { gap: 16px; }
+}
+@media(min-width:761px) and (max-height:820px) { .preview-title { padding-top: 10px; }.setup-profile .elevation { height: 40px; }.ride-setup { padding: 16px; }.start-row { margin-top: 14px; }.setup-note { margin-top: 12px; padding-top: 10px; } }
+@media(max-width:760px) {
+  .week { margin-top: 12px; padding: 12px; }.week strong { font-size: 19px; }
+  .route-card { flex-basis: 268px; }.route-best { display: none; }
+  .segmented.light { width: 100%; }
+  .setup-profile .elevation { height: 44px; }
+  .route-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+}
+@media(min-width:761px) { .route-panel .filter-tabs button { padding: 7px 4px; font-size: 11px; white-space: nowrap; } }

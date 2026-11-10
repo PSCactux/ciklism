@@ -1,5 +1,5 @@
 import { RoutePath, type Route, type Vec3 } from '../domain/route';
-import { groundAt, hash, roadside } from './geometry';
+import { groundAt, groundNoise, hash, roadside } from './geometry';
 import { landscape, lakeFor, lakeRadius, riverProfile } from './scenery';
 
 export type Daylight = 'dia' | 'amanecer' | 'atardecer';
@@ -44,8 +44,22 @@ export function treeLayout(route: Route): TreePlacement[] {
         if (Math.abs(ground.lateral - profile.center) < profile.halfWidth + 8) continue;
       }
       trees.push({ x: p.x, y: ground.height, z: p.z, height: (8 + hash(seed, 7) * 9) * biome.treeHeight,
-        kind: river ? hash(seed, 12) < 0.48 ? 'spruce' : 'alder' : 'pine',
+        kind: river ? hash(seed, 12) < 0.48 ? 'spruce' : 'alder' : biome.species[Math.floor(hash(seed, 12) * biome.species.length)],
         yaw: hash(seed, 9) * 6.28, lean: (hash(seed, 3) - 0.5) * 0.05 });
+    }
+  }
+  // Woods: away from the road trees gather in groves, each mostly of one kind, with open ground between.
+  if (biome.woods) for (let i = 0, d = 0; d < path.totalLength; i++, d += biome.treeStep * 0.5) {
+    for (const side of [-1, 1]) for (let n = 0; n < 4; n++) {
+      const seed = i * 11 + side + 7001 + n * 9173;
+      const p = roadside(path, d + hash(seed, 4) * biome.treeStep * 0.5, side * (26 + hash(seed, 3) * 200));
+      const grove = groundNoise(p.x, p.z, 230, 77);
+      if (grove < 1 - biome.woods || hash(seed, 2) > 0.35 + (grove - (1 - biome.woods)) * 3) continue;
+      const ground = groundAt(path, p.x, p.z);
+      if (ground.distance < 20 || (lake && lakeRadius(lake, p.x, p.z) < 1.16)) continue;
+      const kind = biome.species[Math.floor(Math.min(0.999, groundNoise(p.x, p.z, 520, 91) * 0.8 + hash(seed, 12) * 0.2) * biome.species.length)];
+      trees.push({ x: p.x, y: ground.height, z: p.z, height: (9 + hash(seed, 7) * 10) * biome.treeHeight * (kind === 'alder' ? 0.8 : 1),
+        kind, yaw: hash(seed, 9) * 6.28, lean: (hash(seed, 5) - 0.5) * 0.05 });
     }
   }
   return trees;
@@ -67,7 +81,7 @@ export function lightmapUV(route: Route, positions: number[]) {
 }
 /** Version the recipe as well as inputs so a stale bake cannot silently match a route. */
 export function lightingKey(route: Route, daylight: Daylight) {
-  const recipe = JSON.stringify({ version: route.scenery === 'river' ? 7 : 5, route, light: LIGHTING[daylight], bounds: lightmapBounds(route) });
+  const recipe = JSON.stringify({ version: route.scenery === 'river' ? 8 : 6, route, light: LIGHTING[daylight], bounds: lightmapBounds(route) });
   let value = 2166136261;
   for (let i = 0; i < recipe.length; i++) value = Math.imul(value ^ recipe.charCodeAt(i), 16777619);
   return (value >>> 0).toString(16).padStart(8, '0');

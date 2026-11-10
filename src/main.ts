@@ -13,7 +13,7 @@ import { SessionRecorder, type Session } from './domain/session';
 import { SessionStore, defaultSettings, recordKey } from './platform/storage';
 import { BleCadenceSource, bluetoothSupport, messageOf } from './platform/cadence';
 import type { Daylight, RideScene } from './render/scene';
-import { elevation, escape as esc, km, mapProjection, number, rideMap, routeMap, time } from './ui/format';
+import { elevation, escape as esc, km, mapProjection, number, rideMap, routeMap, spark, time } from './ui/format';
 import { CadenceWindow, MAX_LEVELS, newBike, ratioFor, signalState, speedKmh } from './domain/bike';
 import { climbs, type Climb } from './domain/profile';
 import { Narrator, sectorResult, type Cue } from './ui/narrator';
@@ -54,6 +54,8 @@ let calibrationTimer: ReturnType<typeof setInterval> | undefined, turnsBase = 0;
 const steadiness = new CadenceWindow();
 
 let routeFilter = 'all', historyFilter = 'all';
+// Every saved ride, newest first: the home screen reads its week and its records from here.
+let rides: Session[] = [];
 let dialogOpener: HTMLElement | null = null;
 function notify(message: string, persistent = false) {
   clearTimeout(toastTimer); toast.querySelector('span')!.textContent = message; toast.hidden = false;
@@ -68,25 +70,41 @@ function header() {
   const level = levelFor(profile.totals.xp);
   return `<header class="app-header">${brand()}<nav aria-label="Navegación principal"><button class="nav-active" data-action="home" aria-current="page">${icons.route}<span>Explorar</span></button><button data-action="history">${icons.history}<span>Mis salidas</span></button><button data-action="calibrate">${icons.gauge}<span>Calibrar</span></button><button data-action="settings" aria-label="Ajustes">${icons.settings}<span>Ajustes</span></button></nav><button class="profile-chip" data-action="profile" aria-label="Mi progreso, nivel ${level.number}"><span class="level-avatar">${level.number}</span><span>${level.name}<small>${profile.totals.xp} XP</small></span></button></header>`;
 }
+const SCENERY: Record<string, string> = { meadow: 'Pradera', lake: 'Lago', river: 'Río', alpine: 'Alta montaña', reservoir: 'Embalse', chapel: 'Colinas' };
+/** What the rider has done on a course with a sensor: how often, and the best lap or full run. */
+function routeRecord(routeId: string) {
+  const own = rides.filter(s => s.mode === 'sensor' && s.routeId === routeId);
+  const times = own.flatMap(s => s.laps.length ? s.laps.map(l => l.seconds) : s.finishedRoute ? [s.seconds] : []);
+  return { count: own.length, best: times.length ? Math.min(...times) : null };
+}
+/** Riding time in words: minutes for a short course, hours and minutes for a long one. */
+function duration(seconds: number) {
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  return minutes < 60 ? `${minutes} <small>min</small>` : `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')} <small>h</small>`;
+}
 function home() {
   document.body.classList.remove('riding');
   path = new RoutePath(option.route, reversed);
-  const support = bluetoothSupport();
-  const shown = routes.filter(r => routeFilter === 'all' || (routeFilter === 'easy' ? r.path.climb < 50 : r.path.climb >= 50));
+  const support = bluetoothSupport(), record = routeRecord(option.recordId), ascents = climbs(path);
+  const shown = routes.filter(r => routeFilter === 'all' || (routeFilter === 'long' ? r.path.totalLength >= 20000 : routeFilter === 'easy' ? r.path.climb < 50 : r.path.climb >= 50));
+  const week = rides.filter(s => s.mode === 'sensor' && s.startedAt >= Date.now() - 7 * 864e5);
+  const pace = usualPace(rides) ?? 24 / 3.6;
   ui.innerHTML = `${header()}<main class="home-layout"><section class="route-panel" aria-labelledby="explore-title">
     <div class="eyebrow">UN BUEN DÍA PARA RODAR</div><h1 id="explore-title">Tu próxima<br> escapada.</h1>
-    <p class="intro">Elige un camino. Encuentra tu ritmo.</p>
+    ${week.length ? `<div class="week" aria-label="Tus últimos siete días"><div><strong>${km(week.reduce((sum, s) => sum + s.meters, 0))}</strong><span>km esta semana</span></div><div><strong>${week.length}</strong><span>${week.length === 1 ? 'salida' : 'salidas'}</span></div><div><strong>${time(week.reduce((sum, s) => sum + s.seconds, 0))}</strong><span>en ruta</span></div></div>`
+      : '<p class="intro">Esta semana aún no has salido. Elige un camino y encuentra tu ritmo.</p>'}
     <div class="section-heading"><h2>Explora las rutas</h2><span>${routes.length} recorridos</span></div>
-    <div class="filter-tabs" role="group" aria-label="Filtrar rutas">${[['all', 'Todas'], ['easy', 'Suaves'], ['climb', 'Con subida']].map(([id, text]) => `<button data-route-filter="${id}" aria-pressed="${routeFilter === id}">${text}</button>`).join('')}</div>
-    <div class="route-list" role="group" aria-label="Rutas disponibles">${shown.map(r => `<button class="route-card ${r.id === option.id ? 'selected' : ''}" data-route="${r.id}" aria-pressed="${r.id === option.id}">
-      <div class="route-thumb">${routeMap(r.path)}</div><div class="route-info"><span class="route-type">${r.path.isCircuit ? 'CIRCUITO' : 'TRAVESÍA'}</span><strong>${esc(r.route.nombre)}</strong><span>${km(r.path.totalLength)} km <b>·</b> ${Math.round(r.path.climb)} m de ascenso</span></div><span class="route-selected">${r.id === option.id ? icons.check : ''}</span></button>`).join('')}</div>
-    <div class="local-note">${icons.bike}<div><strong>A tu ritmo, en cualquier pantalla.</strong><span>Tu próxima salida empieza aquí.</span></div></div>
+    <div class="filter-tabs" role="group" aria-label="Filtrar rutas">${[['all', 'Todas'], ['easy', 'Suaves'], ['climb', 'Con subida'], ['long', 'Largas']].map(([id, text]) => `<button data-route-filter="${id}" aria-pressed="${routeFilter === id}">${text}</button>`).join('')}</div>
+    <div class="route-list" role="group" aria-label="Rutas disponibles">${shown.map(r => { const own = routeRecord(r.recordId); return `<button class="route-card ${r.id === option.id ? 'selected' : ''}" data-route="${r.id}" aria-pressed="${r.id === option.id}">
+      <div class="route-thumb">${routeMap(r.path)}</div><div class="route-info"><span class="route-type">${r.path.isCircuit ? 'CIRCUITO' : 'TRAVESÍA'} · ${SCENERY[r.route.scenery ?? 'meadow'].toUpperCase()}</span><strong>${esc(r.route.nombre)}</strong><span>${km(r.path.totalLength)} km <b>·</b> ${Math.round(r.path.climb)} m de ascenso</span>${spark(r.path)}</div>
+      <span class="route-best">${own.best !== null ? `<small>TU MEJOR</small><b>${time(own.best)}</b>` : own.count ? `<small>${own.count} ${own.count === 1 ? 'SALIDA' : 'SALIDAS'}</small>` : '<small>SIN ESTRENAR</small>'}</span></button>`; }).join('')}</div>
     </section><section class="route-preview" aria-label="Vista previa de la ruta">
       <div class="preview-top"><span class="preview-tag"><i></i> VISTA PREVIA</span><button class="glass-button" data-action="reverse" aria-pressed="${reversed}">${icons.reverse}<span>${reversed ? 'Sentido inverso' : 'Cambiar sentido'}</span></button></div>
-      <div class="preview-bottom"><div class="preview-title"><div class="preview-pills"><span>${path.climb < 50 ? 'Ritmo tranquilo' : 'Con subida'}</span><span>${path.isCircuit ? 'Circuito' : 'Travesía'}</span></div><h2>${esc(option.route.nombre)}</h2><p>${esc(option.description)}</p></div>
-      <div class="ride-setup"><div class="setup-top"><div class="segmented" role="group" aria-label="Fuente de cadencia"><button data-mode="sensor" aria-pressed="${mode === 'sensor'}">${icons.bluetooth} Mi sensor</button><button data-mode="demo" aria-pressed="${mode === 'demo'}">${icons.play} Explorar en demo</button></div><label class="light-select"><span class="sr-only">Hora del día</span><select id="daylight"><option value="dia" ${daylight === 'dia' ? 'selected' : ''}>Día</option><option value="amanecer" ${daylight === 'amanecer' ? 'selected' : ''}>Amanecer</option><option value="atardecer" ${daylight === 'atardecer' ? 'selected' : ''}>Atardecer</option></select></label></div>
+      <div class="preview-bottom"><div class="preview-title"><div class="preview-pills"><span>${SCENERY[option.route.scenery ?? 'meadow']}</span><span>${path.isCircuit ? 'Circuito' : 'Travesía'}</span><span>${path.climb < 50 ? 'Ritmo tranquilo' : 'Con subida'}</span></div><h2>${esc(option.route.nombre)}</h2><p>${esc(option.description)}</p></div>
+      <div class="ride-setup"><div class="setup-top"><div class="segmented" role="group" aria-label="Fuente de cadencia"><button data-mode="sensor" aria-pressed="${mode === 'sensor'}">${icons.bluetooth} Mi sensor</button><button data-mode="demo" aria-pressed="${mode === 'demo'}">${icons.play} Explorar en demo</button></div><div class="segmented light" role="group" aria-label="Hora del día">${[['dia', 'Día'], ['amanecer', 'Amanecer'], ['atardecer', 'Atardecer']].map(([id, text]) => `<button data-light="${id}" aria-pressed="${daylight === id}">${text}</button>`).join('')}</div></div>
       <div class="sensor-setup" ${mode === 'demo' ? 'hidden' : ''}><div class="sensor-heading">${icons.bluetooth}<strong>Conecta tu cadencia</strong><span id="sensor-status" role="status"></span></div><p id="sensor-help">${esc(support.message)}</p><div class="sensor-actions"><button id="connect" class="secondary" data-action="connect" ${!support.available || !sourceReady ? 'disabled' : ''}>Conectar sensor</button><button class="secondary" data-action="calibrate">${icons.gauge} Calibrar mi bici</button></div><p class="bike-note">${bikeNote()}</p></div>
-      <div class="start-row"><div class="route-facts"><div><strong>${km(path.totalLength)} <small>km</small></strong><span>Distancia</span></div><div><strong>${Math.round(path.climb)} <small>m</small></strong><span>Ascenso</span></div></div><div class="start-dock"><div class="dock-route"><strong>${esc(option.route.nombre)}</strong><span>${km(path.totalLength)} km · ${Math.round(path.climb)} m de ascenso</span></div><button class="primary start-button" id="start" data-action="start">${mode === 'demo' ? 'Probar la ruta' : 'Empezar a rodar'}</button></div></div>
+      <div class="setup-profile">${elevation(path, ascents)}<div><span>Salida</span><span>${ascents.length ? `${ascents.length} ${ascents.length === 1 ? 'subida' : 'subidas'} · la más larga, ${km(Math.max(...ascents.map(c => c.end - c.start)))} km` : 'Sin subidas largas'}</span><span>Meta</span></div></div>
+      <div class="start-row"><div class="route-facts"><div><strong>${km(path.totalLength)} <small>km</small></strong><span>Distancia</span></div><div><strong>${Math.round(path.climb)} <small>m</small></strong><span>Ascenso</span></div><div><strong>${duration(path.totalLength / pace)}</strong><span>A tu ritmo</span></div><div><strong>${record.best !== null ? time(record.best) : '—'}</strong><span>${path.isCircuit ? 'Tu mejor vuelta' : 'Tu mejor tiempo'}</span></div></div><div class="start-dock"><div class="dock-route"><strong>${esc(option.route.nombre)}</strong><span>${km(path.totalLength)} km · ${Math.round(path.climb)} m de ascenso</span></div><button class="primary start-button" id="start" data-action="start">${mode === 'demo' ? 'Probar la ruta' : 'Empezar a rodar'}</button></div></div>
       <p class="setup-note" id="start-help">${mode === 'demo' ? 'Prueba libre · Sin sensor · No modifica tus récords' : 'Tu cadencia mueve la bici. Tu salida se guarda en este dispositivo.'}</p></div></div>
     </section></main>`;
   updateSensorUI(); updateStart();
@@ -249,7 +267,7 @@ async function finish() {
   try {
     const saved = await store.save(makeSession());
     await store.clearCheckpoint();
-    profile = await store.profile(); engine = null;
+    profile = await store.profile(); rides = await store.sessions(); engine = null;
     await sensor.stop(); home(); renderer.showPreview(option.preview);
     showSession(saved, true);
   } catch (error) {
@@ -435,6 +453,9 @@ root.addEventListener('click', async event => {
     if (target.dataset.route && !busy && !engine) {
       option = routes.find(r => r.id === target.dataset.route)!; home(); ui.querySelector<HTMLButtonElement>(`[data-route="${option.id}"]`)?.focus(); await loadRoute(); return;
     }
+    if (target.dataset.light && !engine && !busy) {
+      daylight = target.dataset.light as Daylight; home(); ui.querySelector<HTMLButtonElement>(`[data-light="${daylight}"]`)?.focus(); await loadRoute(); return;
+    }
     if (target.dataset.mode && !engine && !busy) { mode = target.dataset.mode as typeof mode; home(); ui.querySelector<HTMLButtonElement>(`[data-mode="${mode}"]`)?.focus(); return; }
     if (target.dataset.shift && engine) { engine.shift(Number(target.dataset.shift)); updateHud(); return; }
     if (target.dataset.calibration && engine) {
@@ -521,7 +542,6 @@ root.addEventListener('input', event => {
 root.addEventListener('change', async event => {
   const input = event.target as HTMLInputElement;
   try {
-    if (input.id === 'daylight' && !busy && !engine) { daylight = input.value as Daylight; await loadRoute(); }
     if (input.id === 'quality' || input.id === 'motion') {
       if (input.id === 'quality') settings.quality = input.value as typeof settings.quality;
       else settings.motion = input.checked;
@@ -536,7 +556,7 @@ root.addEventListener('change', async event => {
     if (input.id === 'import-file' && input.files?.[0]) {
       if (input.files[0].size > 50 * 1024 * 1024) throw new Error('La copia supera los 50 MB.');
       const count = await store.import(await input.files[0].text());
-      profile = await store.profile(); home(); await history(); notify(`${count} salidas importadas.`);
+      profile = await store.profile(); rides = await store.sessions(); home(); await history(); notify(`${count} salidas importadas.`);
     }
   } catch (error) { notify(messageOf(error), true); }
 });
@@ -566,6 +586,7 @@ async function boot() {
   // Ask the browser not to clear rides and calibrations when it runs short of space.
   void navigator.storage?.persist?.().catch(() => {});
   const recovered = await store.recover();
+  rides = await store.sessions();
   if (recovered) { profile = await store.profile(); notify('Se ha recuperado la última salida interrumpida en Mis salidas.', true); }
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) settings.motion = false;
   home();

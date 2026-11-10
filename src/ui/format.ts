@@ -47,3 +47,10 @@ export function elevation(path: RoutePath, climbs: readonly { start: number; end
   }).join('');
   return `<svg class="elevation" viewBox="0 0 400 70" preserveAspectRatio="none" aria-label="Perfil de elevación"><polygon points="0,70 ${points} 400,70"/>${steep}<polyline points="${points}"/><line id="elevation-position" x1="0" x2="0" y1="0" y2="70"/></svg>`;
 }
+/** A course's ups and downs in a few pixels, for the route list. */
+export function spark(path: RoutePath) {
+  const steps = 48, heights = Array.from({ length: steps + 1 }, (_, i) => path.sample(path.totalLength * i / steps).position.y);
+  const min = Math.min(...heights), range = Math.max(40, Math.max(...heights) - min);
+  const points = heights.map((h, i) => `${(i / steps * 120).toFixed(1)},${(17 - (h - min) / range * 15).toFixed(1)}`).join(' ');
+  return `<svg class="route-spark" viewBox="0 0 120 18" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,18 ${points} 120,18"/><polyline points="${points}"/></svg>`;
+}

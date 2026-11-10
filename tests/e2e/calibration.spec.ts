@@ -98,7 +98,7 @@ test('every route and time of day can be ridden with the sensor from the first d
   await expect(page.locator('.route-list')).not.toContainText('NIVEL');
   await page.getByRole('button', { name: /Puerto de la Ermita/ }).click();
   await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
-  await page.getByLabel('Hora del día').selectOption('atardecer');
+  await page.getByRole('group', { name: 'Hora del día' }).getByRole('button', { name: 'Atardecer' }).click();
   await expect(page.locator('#world')).toHaveAttribute('data-ready', 'true', { timeout: 45000 });
   await page.getByRole('button', { name: 'Mi sensor', exact: true }).click();
   await page.locator('#connect').click();

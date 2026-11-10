@@ -7,23 +7,24 @@ export async function bakeLighting(route: Route, daylight: Daylight) {
   const b = lightmapBounds(route), path = new RoutePath(route), light = LIGHTING[daylight];
   const canvas = document.createElement('canvas'); canvas.width = b.pixelsX; canvas.height = b.pixelsZ;
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-  const river = route.scenery === 'river';
-  const image = await createImageBitmap(await (await fetch(`/textures/${river ? 'valley-trees' : 'pine-tree'}.webp`)).blob());
-  const masks = Array.from({ length: river ? 2 : 1 }, (_, column) => {
-    const mask = document.createElement('canvas'); mask.width = image.width / (river ? 2 : 1); mask.height = image.height;
+  // One black silhouette per kind of tree: the pine has its own image, spruce and alder share an atlas.
+  const silhouette = async (file: string, columns: number, column: number) => {
+    const image = await createImageBitmap(await (await fetch(`/textures/${file}.webp`)).blob());
+    const mask = document.createElement('canvas'); mask.width = image.width / columns; mask.height = image.height;
     const mc = mask.getContext('2d')!;
     mc.drawImage(image, column * mask.width, 0, mask.width, mask.height, 0, 0, mask.width, mask.height);
     mc.globalCompositeOperation = 'source-in'; mc.fillStyle = '#000'; mc.fillRect(0, 0, mask.width, mask.height);
+    image.close();
     return mask;
-  });
-  image.close();
+  };
+  const masks = { pine: await silhouette('pine-tree', 1, 0), spruce: await silhouette('valley-trees', 2, 0), alder: await silhouette('valley-trees', 2, 1) };
   const sx = b.pixelsX / b.width, sz = b.pixelsZ / b.depth;
   const length = Math.hypot(light.direction.x, light.direction.z);
   const cross = { x: light.direction.z / length, z: -light.direction.x / length };
   for (const tree of treeLayout(route)) {
     // Project the photographic crown in strips so it follows the receiving slope.
-    const mask = masks[tree.kind === 'alder' ? 1 : 0];
-    const strips = 12, width = tree.height * (river ? 0.75 : 2 / 3);
+    const mask = masks[tree.kind];
+    const strips = 12, width = tree.height * (tree.kind === 'pine' ? 2 / 3 : 0.75);
     ctx.globalAlpha = 0.86;
     for (let i = 0; i < strips; i++) {
       const top = i / strips, bottom = (i + 1) / strips;

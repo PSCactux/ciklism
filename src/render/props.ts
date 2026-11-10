@@ -136,18 +136,20 @@ export function backdrop(scene: Scene, scenery: Scenery, haze: Color3) {
   const height = { meadow: 150, lake: 230, river: 300, alpine: 430, reservoir: 260, chapel: 210 }[scenery];
   const tone = Color3.FromHexString({ meadow: '#6f8f86', lake: '#5f8490', river: '#557a72', alpine: '#77808c', reservoir: '#8a8674', chapel: '#8f8468' }[scenery]);
   const data = new VertexData(), positions: number[] = [], colors: number[] = [], indices: number[] = [];
-  const segments = 160, layers = [{ radius: 1740, scale: 1, mix: 0.5, seed: 3 }, { radius: 1660, scale: 0.55, mix: 0.22, seed: 17 }];
+  const segments = 360, layers = [{ radius: 1740, scale: 1, mix: 0.5, seed: 3 }, { radius: 1660, scale: 0.55, mix: 0.22, seed: 17 }];
   for (const layer of layers) {
     const base = positions.length / 3;
+    // Whole-number frequencies make the skyline meet itself where the ring closes.
+    const waves = [[3, 0.3], [7, 0.24], [13, 0.2], [29, 0.15], [61, 0.11]].map(([f, amp], k) => [f, amp, hash(k, layer.seed) * 6.28]);
     for (let i = 0; i <= segments; i++) {
-      const a = i / segments * Math.PI * 2, n = i % segments;
-      // Three octaves of ridge line; the seam closes because the noise is indexed by segment.
-      const ridge = 0.35 + 0.65 * (hash(Math.floor(n / 16), layer.seed) * 0.5 + hash(Math.floor(n / 5), layer.seed + 1) * 0.32 + hash(n, layer.seed + 2) * 0.18);
-      const smooth = 0.35 + 0.65 * (hash(Math.floor(((n + 8) % segments) / 16), layer.seed) * 0.5 + hash(Math.floor(((n + 2) % segments) / 5), layer.seed + 1) * 0.32 + hash((n + 1) % segments, layer.seed + 2) * 0.18);
-      const top = height * layer.scale * (ridge + smooth) / 2, x = Math.cos(a) * layer.radius, z = Math.sin(a) * layer.radius;
-      const peak = Color3.Lerp(tone.scale(0.62), haze, layer.mix), snow = scenery === 'alpine' && layer.scale === 1 && top > height * 0.62;
-      positions.push(x, -60, z, x, top * 0.55, z, x, top, z);
-      colors.push(...Color3.Lerp(peak, haze, 0.55).asArray(), 1, ...Color3.Lerp(peak, haze, 0.2).asArray(), 1, ...(snow ? [0.93, 0.95, 0.97] : peak.asArray()), 1);
+      const a = i / segments * Math.PI * 2;
+      // Folded sines give ridges with sharp tops and broad saddles rather than rounded bumps.
+      const ridge = waves.reduce((sum, [f, amp, phase]) => sum + amp * (1 - Math.abs(Math.sin(a * f / 2 + phase))), 0);
+      const top = height * layer.scale * (0.25 + ridge * 1.1), x = Math.cos(a) * layer.radius, z = Math.sin(a) * layer.radius;
+      const peak = Color3.Lerp(tone.scale(0.62), haze, layer.mix), snow = scenery === 'alpine' && layer.scale === 1 && top > height * 0.66;
+      // The foot reaches far below the horizon in the haze colour, so a high camera never sees under it.
+      positions.push(x, -700, z, x, top * 0.5, z, x, top, z);
+      colors.push(haze.r, haze.g, haze.b, 1, ...Color3.Lerp(peak, haze, 0.3).asArray(), 1, ...(snow ? [0.93, 0.95, 0.97] : peak.asArray()), 1);
       if (i < segments) for (const row of [0, 1]) {
         const p = base + i * 3 + row;
         indices.push(p, p + 1, p + 3, p + 1, p + 4, p + 3);
