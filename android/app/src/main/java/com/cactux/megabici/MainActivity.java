@@ -1,4 +1,4 @@
-package io.github.pscactux.ciklism;
+package com.cactux.megabici;
 
 import com.getcapacitor.BridgeActivity;
 

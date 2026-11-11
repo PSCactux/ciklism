@@ -10,7 +10,7 @@ and the unit tests fail if a map is missing or stale. When the baker recipe or
 tree placement changes, bump `version` in `lightingKey`.
 
 To regenerate (Node 22.12+): start `npm run dev`, then run `npm run bake:lighting`.
-It needs Playwright's Chromium or `CIKLISM_CHROME_PATH`. The baker replaces the
+It needs Playwright's Chromium or `MEGABICI_CHROME_PATH`. The baker replaces the
 manifest once every route is done and only removes files the old manifest listed.
 
 Only the current route/time map is resident on the GPU: at most 2048² RGBA plus

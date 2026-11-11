@@ -1,6 +1,6 @@
 import { chromium } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
-const browser = await chromium.launch({ executablePath: process.env.CIKLISM_CHROME_PATH || undefined,
+const browser = await chromium.launch({ executablePath: process.env.MEGABICI_CHROME_PATH || undefined,
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 try {
   const page = await browser.newPage({ viewport: { width: 1100, height: 700 }, deviceScaleFactor: 1 });

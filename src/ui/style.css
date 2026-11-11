@@ -386,3 +386,54 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
   .start-button { width: auto; min-width: 155px; flex: 0 0 auto; padding-inline: 14px; font-size: 12px; max-width: 60%; }
 }
 @media(max-width:360px) { .start-dock { gap: 10px; padding-inline: 12px; }.start-button { min-width: 144px; font-size: 11px; }.dock-route strong { font-size: 11px; }.dock-route span { font-size: 9px; } }
+/* Calibration: a live sensor check and the levels registered on the rider's own bike. */
+.sensor-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.sensor-setup .bike-note { margin: 10px 0 0; }
+.settings-section h3 + .muted { margin-top: 10px; }
+dialog[data-view=calibration] { width: min(720px,calc(100% - 40px)); }
+.cal-status { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 16px; border: 1px solid #dbe4d0; border-radius: 12px; background: #eff4e8; }
+.cal-status>div { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.cal-status strong { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.cal-status span { font-size: 11px; color: #5b6e52; line-height: 1.5; }
+.signal-light { flex-shrink: 0; width: 14px; height: 14px; border-radius: 50%; background: #c9584a; box-shadow: 0 0 0 4px #c9584a26; }
+.signal-light[data-signal=waiting] { background: #dfa63a; box-shadow: 0 0 0 4px #dfa63a2e; }
+.signal-light[data-signal=good] { background: #5aa246; box-shadow: 0 0 0 4px #5aa24630; }
+.cal-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; padding: 20px 0 8px; }
+.cal-stats>div { display: grid; gap: 2px; align-content: start; justify-items: start; }
+.cal-stats small { font-size: 9px; font-weight: 600; letter-spacing: 1px; color: #617a55; }
+.cal-stats strong { font-size: 30px; line-height: 1.25; font-weight: 600; letter-spacing: -.8px; font-variant-numeric: tabular-nums; }
+.cal-stats span { min-height: 17px; font-size: 11px; color: var(--muted); }
+.cal-stats .text-button,#cal-levels .text-button { min-height: 28px; margin: 0; padding: 0; font-size: 11px; text-decoration: underline; }
+.cal-measure { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.cal-measure label { font-size: 13px; font-weight: 600; }
+.cal-stepper { display: flex; align-items: center; gap: 6px; }
+.cal-stepper button { width: 46px; height: 46px; border: 1px solid #cdd8c6; border-radius: 9px; background: #f3f6ed; font-size: 22px; }
+.cal-stepper button:hover { background: #e6eedc; }
+.cal-stepper input { width: 84px; min-height: 46px; border: 1px solid #ced8c6; border-radius: 9px; background: #fff; color: var(--ink); text-align: center; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cal-stepper span { margin-right: 4px; font-size: 12px; color: var(--muted); }
+.cal-measure .primary { margin-left: auto; }
+.cal-hint { min-height: 18px; margin-top: 10px; font-size: 11px; line-height: 1.6; color: #587246; }
+.cal-level { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.cal-level-number { display: grid; place-items: center; flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; background: #e6edda; color: #486436; font-size: 15px; font-weight: 700; }
+.cal-level>div { display: grid; gap: 3px; flex: 1; min-width: 0; }
+.cal-level strong { font-size: 13px; font-weight: 600; }
+.cal-level small { min-height: 16px; font-size: 11px; color: #587246; }
+.cal-level .secondary { min-height: 40px; padding: 8px 12px; font-size: 11px; }
+.cal-level .icon-button { background: #eaf0e2; color: #4d6545; border-color: transparent; }
+#cal-levels .text-button { margin-top: 14px; }
+.level-cue { align-self: center; margin: auto 0 10px; padding: 10px 18px; border-radius: 10px; background: var(--lime); color: var(--green); font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px #0000002e; }
+.level-cue:not([hidden]) + .ride-controls { margin-top: 0; }
+.ride-calibration output { min-width: 132px; text-align: center; font-size: 13px; font-weight: 600; color: var(--lime); font-variant-numeric: tabular-nums; }
+@media(max-width:760px) {
+  .cal-status { flex-wrap: wrap; }.cal-status .secondary { width: 100%; }
+  .cal-stats strong { font-size: 25px; }
+  .cal-measure .primary { width: 100%; margin-left: 0; }
+  .cal-level { gap: 8px; }.cal-level strong { font-size: 12px; }.cal-level .secondary { padding: 8px 9px; }
+  .level-cue { font-size: 13px; }
+}
+@media(max-width:760px) {
+  .brand { font-size: 23px; letter-spacing: -1.2px; gap: 6px; }.brand svg { width: 27px; height: 27px; }
+  .app-header { gap: 8px; }.app-header nav { gap: 0; }.app-header nav button { padding: 0 7px; font-size: 9px; }
+}
+@media(max-width:360px) { .brand { font-size: 20px; }.brand svg { width: 23px; }.app-header nav button { padding-inline: 5px; }.app-header { gap: 6px; } }
+@media(max-width:340px) { .brand>span { display: none; } }

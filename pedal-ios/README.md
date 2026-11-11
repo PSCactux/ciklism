@@ -1,9 +1,9 @@
 # Pedal
 
 A small SwiftUI app that turns an iPhone into a Bluetooth cadence sensor for
-Ciklism. Strap the phone to your shoe, pedal, and it advertises the standard
+MegaBici. Strap the phone to your shoe, pedal, and it advertises the standard
 Cycling Speed and Cadence service (`1816`, measurement `2A5B`) like a
-commercial crank sensor. Any CSC receiver can read it, not only Ciklism.
+commercial crank sensor. Any CSC receiver can read it, not only MegaBici.
 
 - **Simulated mode:** a slider emits a fixed cadence, for development without a bike.
 - **Real pedalling mode:** CoreMotion at 50 Hz. The default detector estimates

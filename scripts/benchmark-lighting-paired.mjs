@@ -1,8 +1,8 @@
 import { chromium } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
-const baseline = process.env.CIKLISM_RENDER_BASELINE;
-if (!baseline) throw new Error('Set CIKLISM_RENDER_BASELINE to a compatible reference module served by Vite.');
-const browser = await chromium.launch({executablePath:process.env.CIKLISM_CHROME_PATH,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+const baseline = process.env.MEGABICI_RENDER_BASELINE;
+if (!baseline) throw new Error('Set MEGABICI_RENDER_BASELINE to a compatible reference module served by Vite.');
+const browser = await chromium.launch({executablePath:process.env.MEGABICI_CHROME_PATH,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 try {
  const page=await browser.newPage({viewport:{width:960,height:640},deviceScaleFactor:1});
  await page.route('**/__paired',r=>r.fulfill({contentType:'text/html',body:'<style>html,body{margin:0;width:100%;height:100%}canvas{position:absolute;width:100%;height:100%;inset:0}</style><canvas id="before"></canvas><canvas id="after"></canvas>'}));

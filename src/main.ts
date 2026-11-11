@@ -10,10 +10,13 @@ import { RoutePath } from './domain/route';
 import { GEARS, RideClock, RideEngine } from './domain/ride';
 import { ACHIEVEMENTS, emptyTotals, levelFor } from './domain/progress';
 import { SessionRecorder, type Session } from './domain/session';
-import { SessionStore, recordKey } from './platform/storage';
+import { SessionStore, defaultSettings, recordKey } from './platform/storage';
 import { BleCadenceSource, bluetoothSupport, messageOf } from './platform/cadence';
 import type { Daylight, RideScene } from './render/scene';
 import { elevation, escape as esc, km, number, routeMap, time } from './ui/format';
+import { CadenceWindow, MAX_LEVELS, ratioFor, signalState, speedKmh } from './domain/bike';
+import { clamp } from './domain/route';
+import { calibrationView, levelsList, stepSpeed, typedSpeed, updateCalibration } from './ui/calibration';
 
 const root = document.querySelector<HTMLDivElement>('#app')!;
 root.innerHTML = `<canvas id="world" aria-label="Ruta de ciclismo en tres dimensiones"></canvas>
@@ -36,8 +39,12 @@ let routeLoadFailed = false;
 let lastHud = 0, toastTimer: ReturnType<typeof setTimeout>, sourceReady = false;
 let latestCadence = 0, lastCadenceAt = 0;
 let profile = { totals: emptyTotals(), achievements: [] as string[] };
-let settings: Awaited<ReturnType<SessionStore['settings']>> = { calibration: {}, motion: true, quality: 'auto' };
+let settings = defaultSettings();
 let lastCheckpoint = 0, checkpointFailed = false;
+// Riding with the levels registered on the rider's own bike instead of the built-in gears.
+let ownLevels = false, cuedGear: number | null = null, cueUntil = 0;
+let calibrationTimer: ReturnType<typeof setInterval> | undefined, turnsBase = 0;
+const steadiness = new CadenceWindow();
 
 let routeFilter = 'all', historyFilter = 'all';
 let dialogOpener: HTMLElement | null = null;
@@ -49,15 +56,15 @@ function loading(message?: string) {
   loader.hidden = !message;
   if (message) loader.querySelector('span')!.textContent = message;
 }
-function brand() { return `<a class="brand" href="./" aria-label="Ciklism, inicio">${icons.bike}<span>ciklism<span class="brand-dot">.</span></span></a>`; }
+function brand() { return `<a class="brand" href="./" aria-label="MegaBici, inicio">${icons.bike}<span>megabici<span class="brand-dot">.</span></span></a>`; }
 function header() {
   const level = levelFor(profile.totals.xp);
-  return `<header class="app-header">${brand()}<nav aria-label="Navegación principal"><button class="nav-active" data-action="home" aria-current="page">${icons.route}<span>Explorar</span></button><button data-action="history">${icons.history}<span>Mis salidas</span></button><button data-action="settings" aria-label="Ajustes">${icons.settings}<span>Ajustes</span></button></nav><button class="profile-chip" data-action="profile" aria-label="Mi progreso, nivel ${level.number}"><span class="level-avatar">${level.number}</span><span>${level.name}<small>${profile.totals.xp} XP</small></span></button></header>`;
+  return `<header class="app-header">${brand()}<nav aria-label="Navegación principal"><button class="nav-active" data-action="home" aria-current="page">${icons.route}<span>Explorar</span></button><button data-action="history">${icons.history}<span>Mis salidas</span></button><button data-action="calibrate">${icons.gauge}<span>Calibrar</span></button><button data-action="settings" aria-label="Ajustes">${icons.settings}<span>Ajustes</span></button></nav><button class="profile-chip" data-action="profile" aria-label="Mi progreso, nivel ${level.number}"><span class="level-avatar">${level.number}</span><span>${level.name}<small>${profile.totals.xp} XP</small></span></button></header>`;
 }
 function home() {
   document.body.classList.remove('riding');
   path = new RoutePath(option.route, reversed);
-  const support = bluetoothSupport(), level = levelFor(profile.totals.xp);
+  const support = bluetoothSupport();
   const shown = routes.filter(r => routeFilter === 'all' || (routeFilter === 'easy' ? r.path.climb < 50 : r.path.climb >= 50));
   ui.innerHTML = `${header()}<main class="home-layout"><section class="route-panel" aria-labelledby="explore-title">
     <div class="eyebrow">UN BUEN DÍA PARA RODAR</div><h1 id="explore-title">Tu próxima<br> escapada.</h1>
@@ -65,13 +72,13 @@ function home() {
     <div class="section-heading"><h2>Explora las rutas</h2><span>${routes.length} recorridos</span></div>
     <div class="filter-tabs" role="group" aria-label="Filtrar rutas">${[['all', 'Todas'], ['easy', 'Suaves'], ['climb', 'Con subida']].map(([id, text]) => `<button data-route-filter="${id}" aria-pressed="${routeFilter === id}">${text}</button>`).join('')}</div>
     <div class="route-list" role="group" aria-label="Rutas disponibles">${shown.map(r => `<button class="route-card ${r.id === option.id ? 'selected' : ''}" data-route="${r.id}" aria-pressed="${r.id === option.id}">
-      <div class="route-thumb">${routeMap(r.path)}</div><div class="route-info"><span class="route-type">${r.path.isCircuit ? 'CIRCUITO' : 'TRAVESÍA'}${r.level > level.number ? ` · NIVEL ${r.level}` : ''}</span><strong>${esc(r.route.nombre)}</strong><span>${km(r.path.totalLength)} km <b>·</b> ${Math.round(r.path.climb)} m de ascenso</span></div><span class="route-selected">${r.id === option.id ? icons.check : ''}</span></button>`).join('')}</div>
+      <div class="route-thumb">${routeMap(r.path)}</div><div class="route-info"><span class="route-type">${r.path.isCircuit ? 'CIRCUITO' : 'TRAVESÍA'}</span><strong>${esc(r.route.nombre)}</strong><span>${km(r.path.totalLength)} km <b>·</b> ${Math.round(r.path.climb)} m de ascenso</span></div><span class="route-selected">${r.id === option.id ? icons.check : ''}</span></button>`).join('')}</div>
     <div class="local-note">${icons.bike}<div><strong>A tu ritmo, en cualquier pantalla.</strong><span>Tu próxima salida empieza aquí.</span></div></div>
     </section><section class="route-preview" aria-label="Vista previa de la ruta">
       <div class="preview-top"><span class="preview-tag"><i></i> VISTA PREVIA</span><button class="glass-button" data-action="reverse" aria-pressed="${reversed}">${icons.reverse}<span>${reversed ? 'Sentido inverso' : 'Cambiar sentido'}</span></button></div>
       <div class="preview-bottom"><div class="preview-title"><div class="preview-pills"><span>${path.climb < 50 ? 'Ritmo tranquilo' : 'Con subida'}</span><span>${path.isCircuit ? 'Circuito' : 'Travesía'}</span></div><h2>${esc(option.route.nombre)}</h2><p>${esc(option.description)}</p></div>
       <div class="ride-setup"><div class="setup-top"><div class="segmented" role="group" aria-label="Fuente de cadencia"><button data-mode="sensor" aria-pressed="${mode === 'sensor'}">${icons.bluetooth} Mi sensor</button><button data-mode="demo" aria-pressed="${mode === 'demo'}">${icons.play} Explorar en demo</button></div><label class="light-select"><span class="sr-only">Hora del día</span><select id="daylight"><option value="dia" ${daylight === 'dia' ? 'selected' : ''}>Día</option><option value="amanecer" ${daylight === 'amanecer' ? 'selected' : ''}>Amanecer</option><option value="atardecer" ${daylight === 'atardecer' ? 'selected' : ''}>Atardecer</option></select></label></div>
-      <div class="sensor-setup" ${mode === 'demo' ? 'hidden' : ''}><div class="sensor-heading">${icons.bluetooth}<strong>Conecta tu cadencia</strong><span id="sensor-status" role="status"></span></div><p id="sensor-help">${esc(support.message)}</p><button id="connect" class="secondary" data-action="connect" ${!support.available || !sourceReady ? 'disabled' : ''}>Conectar sensor</button></div>
+      <div class="sensor-setup" ${mode === 'demo' ? 'hidden' : ''}><div class="sensor-heading">${icons.bluetooth}<strong>Conecta tu cadencia</strong><span id="sensor-status" role="status"></span></div><p id="sensor-help">${esc(support.message)}</p><div class="sensor-actions"><button id="connect" class="secondary" data-action="connect" ${!support.available || !sourceReady ? 'disabled' : ''}>Conectar sensor</button><button class="secondary" data-action="calibrate">${icons.gauge} Calibrar mi bici</button></div><p class="bike-note">${bikeNote()}</p></div>
       <div class="start-row"><div class="route-facts"><div><strong>${km(path.totalLength)} <small>km</small></strong><span>Distancia</span></div><div><strong>${Math.round(path.climb)} <small>m</small></strong><span>Ascenso</span></div></div><div class="start-dock"><div class="dock-route"><strong>${esc(option.route.nombre)}</strong><span>${km(path.totalLength)} km · ${Math.round(path.climb)} m de ascenso</span></div><button class="primary start-button" id="start" data-action="start">${mode === 'demo' ? 'Probar la ruta' : 'Empezar a rodar'}</button></div></div>
       <p class="setup-note" id="start-help">${mode === 'demo' ? 'Prueba libre · Sin sensor · No modifica tus récords' : 'Tu cadencia mueve la bici. Tu salida se guarda en este dispositivo.'}</p></div></div>
     </section></main>`;
@@ -98,8 +105,6 @@ window.addEventListener('resize', positionMobileCanvas);
 function updateStart() {
   const start = ui.querySelector<HTMLButtonElement>('#start');
   if (!start) return;
-  const locked = mode === 'sensor' && option.level > levelFor(profile.totals.xp).number;
-  const lightLocked = mode === 'sensor' && daylight !== 'dia' && levelFor(profile.totals.xp).number < (daylight === 'amanecer' ? 2 : 3);
   if (routeLoadFailed && !busy) {
     start.disabled = !renderer; start.dataset.action = 'retry-route'; start.textContent = 'Reintentar';
     const help = ui.querySelector('#start-help');
@@ -107,11 +112,11 @@ function updateStart() {
     return;
   }
   start.dataset.action = 'start';
-  start.disabled = busy || !renderer || canvas.dataset.ready !== 'true' || (mode === 'sensor' && sensor.info.status !== 'connected') || locked || lightLocked;
-  start.innerHTML = busy ? 'Preparando…' : locked || lightLocked ? `${icons.lock} Disponible en nivel ${locked ? option.level : daylight === 'amanecer' ? 2 : 3}` : `${mode === 'demo' ? 'Probar la ruta' : 'Empezar a rodar'}`;
+  start.disabled = busy || !renderer || canvas.dataset.ready !== 'true' || (mode === 'sensor' && sensor.info.status !== 'connected');
+  start.innerHTML = busy ? 'Preparando…' : mode === 'demo' ? 'Probar la ruta' : 'Empezar a rodar';
   start.setAttribute('aria-describedby', 'start-help');
   const help = ui.querySelector('#start-help');
-  if (help) help.textContent = locked || lightLocked ? 'Suma experiencia con tu sensor para desbloquearlo o explóralo ahora en demo.' : mode === 'demo' ? 'Prueba libre · Sin sensor · No modifica tus récords' : 'Tu cadencia mueve la bici. Tu salida se guarda en este dispositivo.';
+  if (help) help.textContent = mode === 'demo' ? 'Prueba libre · Sin sensor · No modifica tus récords' : 'Tu cadencia mueve la bici. Tu salida se guarda en este dispositivo.';
 }
 function updateSensorUI() {
   const el = ui.querySelector('#sensor-status');
@@ -140,9 +145,10 @@ function rideUI() {
     <section class="hud" aria-label="Datos de la salida"><div class="speed"><small>VELOCIDAD</small><div><span id="speed">0</span><small>km/h</small></div></div><div class="hud-metric"><small>CADENCIA</small><div><span id="cadence">0</span><small>rpm</small></div></div><div class="hud-metric secondary-metric"><small>DISTANCIA</small><div><span id="distance">0,0</span><small>km</small></div></div><div class="hud-metric secondary-metric"><small>TIEMPO</small><div><span id="elapsed">00:00</span></div></div><div class="hud-metric optional-metric"><small>ASCENSO</small><div><span id="climb">0</span><small>m</small></div></div></section>
     <div class="ride-side"><button class="map-toggle glass-button" data-action="map" aria-expanded="false" aria-controls="ride-map">${icons.route}<span>Mapa</span></button><div class="route-mini" id="ride-map">${routeMap(path)}<span id="lap-label">VUELTA 1</span></div><div class="ghost-info" id="ghost-info" hidden></div><button class="glass-button" id="reconnect" data-action="connect" hidden>Reconectar sensor</button></div>
     <div class="pause-cover" id="pause-cover" hidden role="dialog" aria-modal="true" aria-labelledby="pause-title"><div><span class="pause-symbol">${icons.pause}</span><span class="eyebrow">TÓMATE UN RESPIRO</span><h2 id="pause-title">Tu salida, en pausa.</h2><p>El camino seguirá aquí cuando vuelvas.</p><div class="pause-stats"><span><strong id="pause-distance"></strong> km recorridos</span><span><strong id="pause-time"></strong> de actividad</span></div><button class="primary" data-action="pause">${icons.play} Seguir rodando</button><button class="secondary full-width" data-action="settings">${icons.settings} Ajustes de la experiencia</button><button class="text-button" data-action="finish">Terminar y guardar</button></div></div>
-    <footer class="ride-controls"><div class="route-progress" role="progressbar" aria-label="Progreso de la ruta" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="route-progress-fill"></span></div><div class="ride-controls-top"><div class="gear-control"><button data-shift="-1" aria-label="Bajar marcha">−</button><div><strong id="gear">6ª</strong><small>MARCHA</small></div><button data-shift="1" aria-label="Subir marcha">+</button></div>
+    <div class="level-cue" id="level-cue" role="status" hidden></div>
+    <footer class="ride-controls"><div class="route-progress" role="progressbar" aria-label="Progreso de la ruta" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="route-progress-fill"></span></div><div class="ride-controls-top"><div class="gear-control" ${engine!.gearCount > 1 ? '' : 'hidden'}><button data-shift="-1" aria-label="Bajar ${ownLevels ? 'nivel' : 'marcha'}">−</button><div><strong id="gear"></strong><small>${ownLevels ? 'NIVEL' : 'MARCHA'}</small></div><button data-shift="1" aria-label="Subir ${ownLevels ? 'nivel' : 'marcha'}">+</button></div>
     <div class="profile-strip">${elevation(path)}<div><span id="slope">0 %</span><span id="remaining">${km(path.totalLength)} km hasta meta</span></div></div><button class="finish-button" data-action="finish">${icons.finish}<span>Terminar</span></button></div>
-    <details class="ride-tools"><summary>${icons.settings}<span>${mode === 'demo' ? 'Cadencia de prueba' : 'Ajuste de velocidad'}</span><span class="tools-hint">Ajustar</span></summary><div class="demo-control" ${mode === 'demo' ? '' : 'hidden'}><label for="demo-rpm">Cadencia demo <output id="demo-output">${demoRpm} rpm</output></label><input id="demo-rpm" type="range" min="0" max="140" step="1" value="${demoRpm}" aria-label="Cadencia demo"/></div><div class="ride-calibration" ${mode === 'sensor' ? '' : 'hidden'}><span>Calibración del sensor</span><button data-calibration="-1" aria-label="Reducir ajuste de velocidad">−</button><output id="calibration-value">×${number(calibration())}</output><button data-calibration="1" aria-label="Aumentar ajuste de velocidad">+</button></div></details></footer></div>`;
+    <details class="ride-tools"><summary>${icons.settings}<span>${mode === 'demo' ? 'Cadencia de prueba' : 'Cuadrar la velocidad con tu bici'}</span><span class="tools-hint">Ajustar</span></summary><div class="demo-control" ${mode === 'demo' ? '' : 'hidden'}><label for="demo-rpm">Cadencia demo <output id="demo-output">${demoRpm} rpm</output></label><input id="demo-rpm" type="range" min="0" max="140" step="1" value="${demoRpm}" aria-label="Cadencia demo"/></div><div class="ride-calibration" ${mode === 'sensor' ? '' : 'hidden'}><span>${ownLevels ? 'Este nivel marca' : 'MegaBici marca'}</span><button data-calibration="-1" aria-label="Marcar menos velocidad">−</button><output id="calibration-value"></output><button data-calibration="1" aria-label="Marcar más velocidad">+</button></div></details></footer></div>`;
   updateSensorUI(); updateHud();
 }
 function syncPauseUI() {
@@ -164,13 +170,21 @@ async function requestFinish() {
 }
 function calibrationKey() { return sensor.info.name || 'por defecto'; }
 function calibration() { return settings.calibration[calibrationKey()] ?? 1; }
+// Registered levels already carry the bike's own speed, so the general factor stays out of them.
+function rideFactor() { return mode === 'demo' || ownLevels ? 1 : calibration(); }
+function bikeNote() {
+  const count = settings.bike.levels.length;
+  return count ? `Bici calibrada · ${count} ${count === 1 ? 'nivel' : 'niveles'}` : 'Bici sin calibrar: la velocidad puede no coincidir con la que marca tu bici.';
+}
 async function start() {
   if (busy || engine || !renderer || ui.querySelector<HTMLButtonElement>('#start')?.disabled) return;
   if (mode === 'sensor' && sensor.info.status !== 'connected') return;
   busy = true; updateStart();
   try {
     const record = await store.record(recordKey(option.recordId, reversed, mode));
-    engine = new RideEngine(path, record, mode === 'demo' ? 1 : calibration());
+    ownLevels = settings.bike.levels.length > 0; cuedGear = null;
+    engine = ownLevels ? new RideEngine(path, record, 1, settings.bike.levels.map(l => l.metersPerRev), settings.bike.routeLevels)
+      : new RideEngine(path, record, rideFactor());
     if (mode === 'sensor' && performance.now() - lastCadenceAt < 3000) engine.onCadence(latestCadence);
     recorder = new SessionRecorder(); startedAt = Date.now();
     sessionId = crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint8Array(16)), n => n.toString(16).padStart(2, '0')).join('');
@@ -222,7 +236,9 @@ function updateHud() {
   const s = engine.state;
   const values: Record<string, string> = { speed: number(s.speedMps * 3.6), cadence: String(Math.round(s.cadenceRpm)),
     distance: km(s.travelled), elapsed: time(s.elapsedSeconds), climb: String(Math.round(s.climbMeters)),
-    gear: `${s.gear + 1}ª`, slope: `${s.slope >= 0 ? '+' : ''}${number(s.slope * 100)} %`,
+    gear: ownLevels ? String(s.gear + 1) : `${s.gear + 1}ª`,
+    'calibration-value': `${number(speedKmh(ownLevels ? settings.bike.levels[s.gear].metersPerRev : GEARS[s.gear] * rideFactor(), s.cadenceRpm || 80))} km/h${s.cadenceRpm ? '' : ' a 80 rpm'}`,
+    slope: `${s.slope >= 0 ? '+' : ''}${number(s.slope * 100)} %`,
     remaining: `${km(path.totalLength - s.distance)} km ${path.isCircuit ? 'hasta meta' : 'por delante'}`,
     'lap-label': path.isCircuit ? `VUELTA ${s.lap} · ${time(s.lapSeconds)}` : 'EN RUTA' };
   for (const [id, value] of Object.entries(values)) {
@@ -230,7 +246,15 @@ function updateHud() {
   }
   for (const direction of [-1, 1]) {
     const button = ui.querySelector<HTMLButtonElement>(`[data-shift="${direction}"]`);
-    if (button) button.disabled = direction < 0 ? s.gear === 0 : s.gear === GEARS.length - 1;
+    if (button) button.disabled = direction < 0 ? s.gear === 0 : s.gear === engine.gearCount - 1;
+  }
+  const cue = ui.querySelector<HTMLElement>('#level-cue');
+  if (cue) {
+    if (s.routeGear !== cuedGear) {
+      cuedGear = s.routeGear; cueUntil = performance.now() + 8000;
+      if (s.routeGear !== null) cue.textContent = `Pon tu bici en el nivel ${s.routeGear + 1}`;
+    }
+    cue.hidden = s.routeGear === null || performance.now() > cueUntil;
   }
   const progress = Math.min(100, Math.max(0, s.distance / path.totalLength * 100));
   const fill = ui.querySelector<HTMLElement>('#route-progress-fill'); if (fill) fill.style.width = `${progress}%`;
@@ -245,19 +269,60 @@ function modal(title: string, html: string, view = 'default') {
   if (!dialog.open) dialogOpener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   dialog.dataset.view = view;
   dialog.setAttribute('aria-labelledby', 'dialog-title');
-  dialog.innerHTML = `<div class="dialog-heading"><div><span class="eyebrow">CIKLISM / ${view === 'history' ? 'ACTIVIDAD' : view === 'settings' ? 'TU EXPERIENCIA' : view === 'profile' ? 'PROGRESO' : 'TU SALIDA'}</span><h2 id="dialog-title">${esc(title)}</h2></div><button class="icon-button" data-action="close" aria-label="Cerrar">${icons.close}</button></div><div class="dialog-body">${html}</div>`;
+  dialog.innerHTML = `<div class="dialog-heading"><div><span class="eyebrow">MEGABICI / ${view === 'history' ? 'ACTIVIDAD' : view === 'settings' ? 'TU EXPERIENCIA' : view === 'profile' ? 'PROGRESO' : view === 'calibration' ? 'CALIBRAJE' : 'TU SALIDA'}</span><h2 id="dialog-title">${esc(title)}</h2></div><button class="icon-button" data-action="close" aria-label="Cerrar">${icons.close}</button></div><div class="dialog-body">${html}</div>`;
   if (!dialog.open) dialog.showModal();
   ui.inert = true;
   ui.setAttribute('aria-hidden', 'true');
 }
 dialog.addEventListener('close', () => {
   if (dialog.open) return;
+  clearInterval(calibrationTimer);
+  const note = ui.querySelector('.bike-note'); if (note) note.textContent = bikeNote();
   ui.inert = false;
   ui.removeAttribute('aria-hidden');
   if (dialogOpener?.isConnected && !dialogOpener.closest('[inert]')) dialogOpener.focus();
   else if (engine && !running) ui.querySelector<HTMLButtonElement>('#pause-cover [data-action="pause"]')?.focus();
   else ui.querySelector<HTMLButtonElement>('#start')?.focus();
 });
+function liveCadence() {
+  return sensor.info.status === 'connected' && performance.now() - lastCadenceAt < 3000 ? latestCadence : 0;
+}
+function refreshCalibration() {
+  if (dialog.dataset.view !== 'calibration' || !dialog.open) return;
+  const now = performance.now(), support = bluetoothSupport(), status = sensor.info.status;
+  const sinceData = sensor.lastDataAt === null ? null : (now - sensor.lastDataAt) / 1000;
+  const signal = signalState(status === 'connected', sinceData ?? Infinity), cadence = liveCadence();
+  steadiness.push(now / 1000, cadence);
+  updateCalibration(dialog, settings.bike, { signal, cadence, turns: sensor.turns - turnsBase, secondsSinceData: sinceData,
+    reading: steadiness.reading, canConnect: support.available && sourceReady,
+    status: signal === 'good' ? `${sensor.info.name} · señal correcta` : signal === 'waiting' ? `${sensor.info.name} · conectado, sin datos`
+      : status === 'connecting' ? 'Conectando…' : status === 'reconnecting' ? 'Reconectando…' : 'Sin conectar',
+    detail: signal === 'good' ? (cadence > 0 ? 'Recibiendo tus pedaladas.' : 'Llegan datos del sensor. Pedalea para ver la cadencia.')
+      : signal === 'waiting' ? 'Da unas pedaladas para despertar el sensor.'
+      : status === 'error' || status === 'reconnecting' ? sensor.info.message : support.message });
+}
+function showCalibration() {
+  if (engine) return;
+  steadiness.reset(); turnsBase = sensor.turns;
+  modal('Calibra tu bici', calibrationView(settings.bike), 'calibration');
+  clearInterval(calibrationTimer); calibrationTimer = setInterval(refreshCalibration, 250);
+  refreshCalibration();
+}
+async function saveBike(focus?: string) {
+  await store.saveSettings(settings);
+  dialog.querySelector('#cal-levels')!.innerHTML = levelsList(settings.bike);
+  const register = dialog.querySelector<HTMLButtonElement>('#cal-register')!;
+  register.hidden = settings.bike.levels.length >= MAX_LEVELS;
+  register.textContent = `Registrar nivel ${settings.bike.levels.length + 1}`;
+  refreshCalibration();
+  if (focus) dialog.querySelector<HTMLElement>(focus)?.focus();
+}
+/** Ratio for the level being registered: measured against the bike's display, or inherited when nothing was typed. */
+function measuredRatio(inherit: boolean) {
+  const typed = typedSpeed(dialog), { rpm, steady } = steadiness.reading;
+  if (typed === null) return inherit ? settings.bike.levels.at(-1)?.metersPerRev ?? null : null;
+  return typed === 'invalid' || !steady ? null : ratioFor(typed, rpm);
+}
 async function history() {
   const all = await store.sessions(), sessions = all.filter(s => historyFilter === 'all' || s.mode === historyFilter);
   const total = sessions.reduce((sum, s) => ({ meters: sum.meters + s.meters, seconds: sum.seconds + s.seconds }), { meters: 0, seconds: 0 });
@@ -291,10 +356,10 @@ function showSettings() {
 }
 async function exportBackup() {
   const data = await store.export();
-  const filename = `ciklism-${new Date().toISOString().slice(0, 10)}.json`;
+  const filename = `megabici-${new Date().toISOString().slice(0, 10)}.json`;
   if (Capacitor.isNativePlatform()) {
     const result = await Filesystem.writeFile({ path: filename, data, directory: Directory.Cache, encoding: Encoding.UTF8 });
-    await Share.share({ title: 'Copia de Ciklism', url: result.uri, dialogTitle: 'Guardar o compartir tu historial' });
+    await Share.share({ title: 'Copia de MegaBici', url: result.uri, dialogTitle: 'Guardar o compartir tu historial' });
     return;
   }
   const blob = new Blob([data], { type: 'application/json' });
@@ -319,11 +384,23 @@ root.addEventListener('click', async event => {
     if (target.dataset.mode && !engine && !busy) { mode = target.dataset.mode as typeof mode; home(); ui.querySelector<HTMLButtonElement>(`[data-mode="${mode}"]`)?.focus(); return; }
     if (target.dataset.shift && engine) { engine.shift(Number(target.dataset.shift)); updateHud(); return; }
     if (target.dataset.calibration && engine) {
-      const value = Math.round((calibration() + Number(target.dataset.calibration) * 0.05) * 100) / 100;
-      settings.calibration[calibrationKey()] = Math.min(2.5, Math.max(0.4, value));
-      engine.setCalibration(calibration()); await store.saveSettings(settings);
-      ui.querySelector('#calibration-value')!.textContent = `×${number(calibration())}`; return;
+      // One per cent per tap: fine enough to land on the tenth the bike's display shows.
+      const step = 1 + Number(target.dataset.calibration) * 0.01, gear = engine.state.gear;
+      if (ownLevels) {
+        const level = settings.bike.levels[gear];
+        level.metersPerRev = clamp(level.metersPerRev * step, 0.5, 25); engine.setRatio(gear, level.metersPerRev);
+      } else {
+        settings.calibration[calibrationKey()] = clamp(calibration() * step, 0.4, 2.5); engine.setCalibration(calibration());
+      }
+      await store.saveSettings(settings); updateHud(); return;
     }
+    if (target.dataset.calStep) { stepSpeed(dialog, settings.bike, steadiness.reading.rpm, Number(target.dataset.calStep)); refreshCalibration(); return; }
+    if (target.dataset.calRedo) {
+      const ratio = measuredRatio(false), index = Number(target.dataset.calRedo);
+      if (ratio !== null && settings.bike.levels[index]) { settings.bike.levels[index].metersPerRev = ratio; await saveBike(`[data-cal-redo="${index}"]`); }
+      return;
+    }
+    if (target.dataset.calRemove) { settings.bike.levels.splice(Number(target.dataset.calRemove), 1); await saveBike('#cal-register'); return; }
     if (target.dataset.session) {
       const s = (await store.sessions()).find(s => s.id === target.dataset.session); if (s) showSession(s); return;
     }
@@ -346,8 +423,22 @@ root.addEventListener('click', async event => {
       }
       case 'retry-route': if (!busy && !engine) { toast.hidden = true; await loadRoute(); } break;
       case 'reverse': if (!busy && !engine) { reversed = !reversed; home(); ui.querySelector<HTMLButtonElement>('[data-action="reverse"]')?.focus(); await loadRoute(); } break;
-      case 'connect': target.setAttribute('disabled', ''); try { await sensor.choose(); } finally { target.removeAttribute('disabled'); } break;
+      case 'connect': target.setAttribute('disabled', ''); target.dataset.busy = 'true'; try { await sensor.choose(); } finally { target.removeAttribute('disabled'); delete target.dataset.busy; } break;
       case 'history': await history(); break;
+      case 'calibrate': showCalibration(); break;
+      case 'cal-zero': turnsBase = sensor.turns; refreshCalibration(); break;
+      case 'cal-register': {
+        const ratio = measuredRatio(true);
+        if (ratio !== null && settings.bike.levels.length < MAX_LEVELS) {
+          settings.bike.levels.push({ metersPerRev: ratio });
+          await saveBike('#cal-register');
+        }
+        break;
+      }
+      case 'cal-clear':
+        if (target.dataset.armed) { settings.bike.levels = []; await saveBike('#cal-register'); }
+        else { target.dataset.armed = 'true'; target.textContent = 'Pulsa otra vez para borrarlos'; }
+        break;
       case 'profile': showProfile(); break;
       case 'settings': showSettings(); break;
       case 'export': await exportBackup(); break;
@@ -358,6 +449,7 @@ root.addEventListener('click', async event => {
 root.addEventListener('input', event => {
   const input = event.target as HTMLInputElement;
   if (input.id === 'demo-rpm') { demoRpm = Number(input.value); ui.querySelector('#demo-output')!.textContent = `${demoRpm} rpm`; }
+  if (input.id === 'cal-speed') refreshCalibration();
 });
 root.addEventListener('change', async event => {
   const input = event.target as HTMLInputElement;
@@ -368,6 +460,7 @@ root.addEventListener('change', async event => {
       else settings.motion = input.checked;
       renderer.setOptions(settings.quality, settings.motion); await store.saveSettings(settings);
     }
+    if (input.id === 'route-levels') { settings.bike.routeLevels = input.checked; await store.saveSettings(settings); }
     if (input.id === 'import-file' && input.files?.[0]) {
       if (input.files[0].size > 50 * 1024 * 1024) throw new Error('La copia supera los 50 MB.');
       const count = await store.import(await input.files[0].text());
@@ -390,7 +483,7 @@ document.addEventListener('keydown', event => {
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden && running) void pause(); });
 window.addEventListener('beforeunload', event => { if (engine && engine.state.elapsedSeconds > 0) { event.preventDefault(); } });
-sensor.onChange = info => { updateSensorUI(); if (engine && mode === 'sensor' && info.status === 'connected') engine.setCalibration(calibration()); };
+sensor.onChange = info => { updateSensorUI(); if (engine && mode === 'sensor' && info.status === 'connected') engine.setCalibration(rideFactor()); };
 sensor.onCadence = rpm => {
   latestCadence = rpm; lastCadenceAt = performance.now();
   if (engine && mode === 'sensor' && running) engine.onCadence(rpm);
@@ -431,4 +524,4 @@ async function boot() {
     await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
   }
 }
-boot().catch(error => { loading(); notify(`No se ha podido iniciar Ciklism: ${messageOf(error)}. Comprueba que tu navegador admite WebGL y almacenamiento local.`, true); });
+boot().catch(error => { loading(); notify(`No se ha podido iniciar MegaBici: ${messageOf(error)}. Comprueba que tu navegador admite WebGL y almacenamiento local.`, true); });

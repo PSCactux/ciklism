@@ -1,6 +1,6 @@
 import { chromium } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
-const browser = await chromium.launch({ executablePath: process.env.CIKLISM_CHROME_PATH || undefined,
+const browser = await chromium.launch({ executablePath: process.env.MEGABICI_CHROME_PATH || undefined,
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 try {
   await mkdir('test-results/ui-review', { recursive: true });

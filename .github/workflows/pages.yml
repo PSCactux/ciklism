@@ -16,6 +16,8 @@ concurrency:
 
 jobs:
   build:
+    # Copies of this repository have no Pages site to deploy to.
+    if: github.repository == 'PSCactux/ciklism'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

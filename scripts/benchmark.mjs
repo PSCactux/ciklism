@@ -5,9 +5,9 @@ import { mkdir, writeFile } from 'node:fs/promises';
 const label = process.argv[2] || 'current';
 const quality = process.argv[3] || 'high';
 const routeId = process.argv[4] || 'ermita';
-const source = process.env.CIKLISM_RENDER_SOURCE || '/src/render/scene.ts';
+const source = process.env.MEGABICI_RENDER_SOURCE || '/src/render/scene.ts';
 const browser = await chromium.launch({
-  executablePath: process.env.CIKLISM_CHROME_PATH || undefined,
+  executablePath: process.env.MEGABICI_CHROME_PATH || undefined,
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
 });
 try {

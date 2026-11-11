@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>NSBluetoothAlwaysUsageDescription</key>
-    <string>Ciklism recibe la cadencia de Pedal o de tu sensor Bluetooth para mover la bici.</string>
+    <string>MegaBici recibe la cadencia de Pedal o de tu sensor Bluetooth para mover la bici.</string>
   <key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>Ciklism</string>
+        <string>MegaBici</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

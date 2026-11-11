@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 const results = [];
 for (const backend of ['metal', 'webkit']) {
  const browser = backend === 'webkit' ? await webkit.launch() : await chromium.launch({
-  executablePath: process.env.CIKLISM_CHROME_PATH,
+  executablePath: process.env.MEGABICI_CHROME_PATH,
   args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
  try {
   const page = await browser.newPage({viewport:{width:1100,height:700}});

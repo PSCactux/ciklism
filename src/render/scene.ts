@@ -73,7 +73,7 @@ export class RideScene {
   private preparing = false;
   private diagnostic(stage: string, pending: Scene['meshes'] = []) {
     if (!import.meta.env.DEV || !import.meta.hot) return;
-    import.meta.hot.send('ciklism:render-diagnostic', {
+    import.meta.hot.send('megabici:render-diagnostic', {
       stage, agent: navigator.userAgent, route: this.bakingRoute?.route.nombre,
       renderSize: [this.engine.getRenderWidth(), this.engine.getRenderHeight()],
       clientSize: [this.canvas.clientWidth, this.canvas.clientHeight],
@@ -327,7 +327,7 @@ export class RideScene {
         if (performance.now() >= deadline) {
           const names = [...new Set(pending.map(mesh => mesh.material?.name ?? mesh.name))];
           this.canvas.dataset.loadError = names.join(', ');
-          console.error('Ciklism: materiales pendientes', names);
+          console.error('MegaBici: materiales pendientes', names);
           this.diagnostic('timeout', pending);
           throw new Error('La vista 3D no ha podido abrirse. Pulsa Reintentar.');
         }

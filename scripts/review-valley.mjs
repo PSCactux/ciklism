@@ -2,7 +2,7 @@ import { chromium } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 
 const label = process.argv[2] || 'after';
-const browser = await chromium.launch({ executablePath: process.env.CIKLISM_CHROME_PATH || undefined,
+const browser = await chromium.launch({ executablePath: process.env.MEGABICI_CHROME_PATH || undefined,
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 try {
   const context = await browser.newContext({ viewport: { width: 1200, height: 800 }, deviceScaleFactor: 1 });

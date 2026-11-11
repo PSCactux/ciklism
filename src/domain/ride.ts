@@ -1,5 +1,6 @@
 import { add, clamp, normalize, RoutePath, scale, type Vec3 } from './route';
 import { LapTimer, type LapRecord } from './laps';
+import { LevelGuide } from './bike';
 
 export const GEARS = [2.6, 3.2, 3.9, 4.7, 5.6, 6.5, 7.4, 8.3, 9.2];
 export interface RideState {
@@ -7,6 +8,8 @@ export interface RideState {
   elapsedSeconds: number; position: Vec3; forward: Vec3; slope: number;
   powerWatts: number; crankAngle: number; gear: number; lap: number;
   lapSeconds: number; climbMeters: number; finished: boolean;
+  /** Level the course is asking for, when the rider's own bike levels follow the slope. */
+  routeGear: number | null;
   ghostDistance: number | null; deltaSeconds: number | null;
 }
 export function coastAcceleration(speed: number, slope: number) {
@@ -28,19 +31,27 @@ export class RideEngine {
   private climb = 0;
   private crank = 0;
   private lapStarted = 0;
-  private gear = 5;
+  private gear: number;
   private factor = 1;
   private previousY: number;
+  private readonly gears: number[];
+  private readonly guide: LevelGuide | null;
   state: RideState;
 
-  constructor(readonly path: RoutePath, record?: LapRecord, calibration = 1) {
+  /** `gears` are metres per crank turn: the built-in set, or the levels registered on the rider's bike. */
+  constructor(readonly path: RoutePath, record?: LapRecord, calibration = 1, gears: readonly number[] = GEARS, routeLevels = false) {
     this.timer = new LapTimer(path.totalLength, record);
     this.previousY = path.sample(0).position.y;
     this.setCalibration(calibration);
+    this.gears = [...gears];
+    this.guide = routeLevels && gears.length > 1 ? new LevelGuide(gears.length, path.sample(0).slope) : null;
+    this.gear = this.guide?.level ?? (gears === GEARS ? 5 : 0);
     this.state = this.snapshot();
   }
+  get gearCount() { return this.gears.length; }
   setCalibration(factor: number) { if (Number.isFinite(factor)) this.factor = clamp(factor, 0.4, 2.5); }
-  shift(steps: number) { this.gear = clamp(this.gear + Math.trunc(steps), 0, GEARS.length - 1); }
+  setRatio(gear: number, metersPerRev: number) { if (gear in this.gears && metersPerRev > 0) this.gears[gear] = metersPerRev; }
+  shift(steps: number) { this.gear = clamp(this.gear + Math.trunc(steps), 0, this.gears.length - 1); }
   onCadence(rpm: number) {
     if (!Number.isFinite(rpm) || rpm < 0 || rpm > 250) return;
     this.cadence = rpm; this.age = 0;
@@ -53,8 +64,11 @@ export class RideEngine {
     this.age += dt;
     if (this.age > 3) this.cadence = 0;
     const slope = this.path.sample(this.distance).slope;
+    // A manual shift holds until the course moves into another slope band.
+    const asked = this.guide?.update(slope, dt) ?? null;
+    if (asked !== null) this.gear = asked;
     this.speed = this.cadence > 0
-      ? this.speed + (this.cadence / 60 * GEARS[this.gear] * this.factor - this.speed) * dt / (dt + 1.4)
+      ? this.speed + (this.cadence / 60 * this.gears[this.gear] * this.factor - this.speed) * dt / (dt + 1.4)
       : Math.max(0, this.speed + coastAcceleration(this.speed, slope) * dt);
     let advance = this.speed * dt;
     let duration = dt;
@@ -91,6 +105,7 @@ export class RideEngine {
       cadenceRpm: this.cadence, elapsedSeconds: this.elapsed, powerWatts: this.cadence * 2 * Math.PI / 60 * 25 * 0.97,
       crankAngle: this.crank, gear: this.gear, lap: this.timer.laps.length + 1, lapSeconds,
       climbMeters: this.climb, finished: !this.path.isCircuit && this.distance >= this.path.totalLength,
+      routeGear: this.guide?.level ?? null,
       ghostDistance: this.path.isCircuit ? this.timer.ghostDistance(lapSeconds) : null,
       deltaSeconds: this.path.isCircuit ? this.timer.delta(this.distance, lapSeconds) : null };
   }

@@ -1,7 +1,7 @@
 // Run with the development server on 5184. Generates local assets, no remote service.
 import { chromium } from '@playwright/test';
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
-const browser = await chromium.launch({ executablePath: process.env.CIKLISM_CHROME_PATH || undefined });
+const browser = await chromium.launch({ executablePath: process.env.MEGABICI_CHROME_PATH || undefined });
 try {
   const page = await browser.newPage();
   await page.route('**/__bake', route => route.fulfill({ contentType: 'text/html', body: '<title>Lighting baker</title>' }));

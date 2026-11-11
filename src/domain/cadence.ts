@@ -9,6 +9,8 @@ export function parseCsc(data: DataView): CscMeasurement | null {
 }
 export class CadenceCalculator {
   private last: CscMeasurement | null = null;
+  /** Crank turns counted since the app started; survives reconnections. */
+  turns = 0;
   update(m: CscMeasurement): number | null {
     const previous = this.last;
     this.last = m;
@@ -18,7 +20,9 @@ export class CadenceCalculator {
     if (!revolutions || !time) return null;
     const rpm = revolutions * 60 * 1024 / time;
     // Reboots/corrupt notifications must not accelerate the rider to absurd speeds.
-    return rpm <= 250 ? rpm : null;
+    if (rpm > 250) return null;
+    this.turns += revolutions;
+    return rpm;
   }
   reset() { this.last = null; }
 }

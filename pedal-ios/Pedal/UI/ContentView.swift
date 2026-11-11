@@ -79,7 +79,7 @@ struct ContentView: View {
                 .padding(.horizontal)
 
                 if startDisabled {
-                    Text("Esperando al visor: conéctate desde la app Ciklism y Empezar se activará.")
+                    Text("Esperando al visor: conéctate desde la app MegaBici y Empezar se activará.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)

@@ -3,10 +3,12 @@ import { z } from 'zod';
 import { addOutcome, emptyTotals, earned, reward, type Totals } from '../domain/progress';
 import type { Session } from '../domain/session';
 import { emptyRecord, type LapRecord } from '../domain/laps';
+import { emptyBike, sanitizeBike, type BikeSetup } from '../domain/bike';
 
 interface Profile { totals: Totals; achievements: string[] }
-interface Settings { calibration: Record<string, number>; motion: boolean; quality: 'auto' | 'high' | 'low' }
-interface CiklismDB extends DBSchema {
+export interface Settings { calibration: Record<string, number>; motion: boolean; quality: 'auto' | 'high' | 'low'; bike: BikeSetup }
+export const defaultSettings = (): Settings => ({ calibration: {}, motion: true, quality: 'auto', bike: emptyBike() });
+interface MegaBiciDB extends DBSchema {
   sessions: { key: string; value: Session };
   records: { key: string; value: LapRecord };
   recovery: { key: string; value: Session };
@@ -26,13 +28,14 @@ const session = z.object({
   samples: z.array(z.object({ seconds: n, meters: n, speed: n, cadence: n, altitude: z.number().finite() })).max(100000),
   record, xp: n, achievements: z.array(z.string().max(100)).max(100),
 });
-export const backupSchema = z.object({ format: z.literal('ciklism'), version: z.literal(1),
+// Copies exported before the rename carry the old format name and stay importable.
+export const backupSchema = z.object({ format: z.enum(['megabici', 'ciklism']), version: z.literal(1),
   sessions: z.array(session).max(10000),
 });
 export function parseBackup(text: string): Session[] {
   if (text.length > 50 * 1024 * 1024) throw new Error('El archivo supera los 50 MB.');
   const result = backupSchema.safeParse(JSON.parse(text));
-  if (!result.success) throw new Error('No es una copia compatible de Ciklism (versión 1).');
+  if (!result.success) throw new Error('No es una copia compatible de MegaBici (versión 1).');
   const ids = new Set<string>();
   for (const s of result.data.sessions) {
     if (ids.has(s.id)) throw new Error('La copia contiene sesiones duplicadas.');
@@ -46,7 +49,8 @@ export function parseBackup(text: string): Session[] {
 }
 export const recordKey = (routeId: string, reversed: boolean, mode: string) => `${routeId}:${reversed ? 'reverse' : 'forward'}:${mode}`;
 export class SessionStore {
-  private db = openDB<CiklismDB>('ciklism-shared', 1, { upgrade(db) {
+  // The database keeps its original name so rides saved before the rename are still there.
+  private db = openDB<MegaBiciDB>('ciklism-shared', 1, { upgrade(db) {
     db.createObjectStore('sessions', { keyPath: 'id' });
     db.createObjectStore('records'); db.createObjectStore('meta'); db.createObjectStore('recovery');
   } });
@@ -54,7 +58,8 @@ export class SessionStore {
     return (await (await this.db).get('meta', 'profile') as Profile | undefined) ?? { totals: emptyTotals(), achievements: [] };
   }
   async settings(): Promise<Settings> {
-    return (await (await this.db).get('meta', 'settings') as Settings | undefined) ?? { calibration: {}, motion: true, quality: 'auto' };
+    const stored = await (await this.db).get('meta', 'settings') as Partial<Settings> | undefined;
+    return { ...defaultSettings(), ...stored, bike: sanitizeBike(stored?.bike) };
   }
   async saveSettings(settings: Settings) { await (await this.db).put('meta', settings, 'settings'); }
   async sessions() { return (await (await this.db).getAll('sessions')).sort((a, b) => b.startedAt - a.startedAt); }
@@ -83,7 +88,7 @@ export class SessionStore {
     await tx.done;
     return s;
   }
-  async export() { return JSON.stringify({ format: 'ciklism', version: 1, sessions: await this.sessions() }, null, 2); }
+  async export() { return JSON.stringify({ format: 'megabici', version: 1, sessions: await this.sessions() }, null, 2); }
   async checkpoint(session: Session) { await (await this.db).put('recovery', session, 'active'); }
   async clearCheckpoint() { await (await this.db).delete('recovery', 'active'); }
   async recover() {

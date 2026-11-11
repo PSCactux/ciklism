@@ -10,7 +10,7 @@ export default defineConfig({
   plugins: [{ name: 'local-render-diagnostics', configureServer(server) {
     const entries: unknown[] = [];
     let writing = Promise.resolve();
-    server.ws.on('ciklism:render-diagnostic', data => {
+    server.ws.on('megabici:render-diagnostic', data => {
       entries.push({ at: new Date().toISOString(), data });
       if (entries.length > 30) entries.shift();
       const snapshot = JSON.stringify(entries, null, 2);
@@ -25,7 +25,7 @@ export default defineConfig({
     injectRegister: false,
     includeAssets: ['icon.svg', 'apple-touch-icon.png'],
     manifest: {
-      name: 'Ciklism', short_name: 'Ciklism', lang: 'es',
+      name: 'MegaBici', short_name: 'MegaBici', lang: 'es',
       description: 'Tus rutas de ciclismo indoor, en cualquier pantalla.',
       theme_color: '#152820', background_color: '#f3f2e9', display: 'standalone',
       icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

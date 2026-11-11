@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "io.github.pscactux.ciklism"
+    namespace = "com.cactux.megabici"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "io.github.pscactux.ciklism"
+        applicationId "com.cactux.megabici"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

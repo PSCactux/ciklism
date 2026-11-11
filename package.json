@@ -1,5 +1,5 @@
 {
-  "name": "ciklism",
+  "name": "megabici",
   "private": true,
   "version": "0.1.0",
   "description": "Indoor cycling viewer for web, iPhone and Android: Babylon.js + Capacitor with Bluetooth cadence sensors.",

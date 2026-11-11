@@ -12,7 +12,7 @@ targets:
       path: Pedal/Info.plist
       properties:
         UILaunchScreen: {}
-        NSBluetoothAlwaysUsageDescription: "Pedal emite tu cadencia por Bluetooth al visor Ciklism."
+        NSBluetoothAlwaysUsageDescription: "Pedal emite tu cadencia por Bluetooth al visor MegaBici."
         NSMotionUsageDescription: "Pedal usa el acelerómetro para detectar tus pedaladas."
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true

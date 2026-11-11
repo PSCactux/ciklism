@@ -7,9 +7,9 @@ export type SensorStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' 
 export interface SensorInfo { status: SensorStatus; name: string; message: string }
 export function bluetoothSupport(): { available: boolean; message: string } {
   if (Capacitor.isNativePlatform()) return { available: true, message: 'Conecta Pedal o un sensor de cadencia Bluetooth.' };
-  if (!window.isSecureContext) return { available: false, message: 'Abre Ciklism mediante HTTPS para conectar tu sensor. Puedes explorar las rutas en demo.' };
+  if (!window.isSecureContext) return { available: false, message: 'Abre MegaBici mediante HTTPS para conectar tu sensor. Puedes explorar las rutas en demo.' };
   if (!('bluetooth' in navigator)) return { available: false,
-    message: 'Este navegador no permite conectar sensores. En iPhone, usa la app Ciklism; en ordenador, un navegador con Web Bluetooth. Aquí puedes probar el modo demo.' };
+    message: 'Este navegador no permite conectar sensores. En iPhone, usa la app MegaBici; en ordenador, un navegador con Web Bluetooth. Aquí puedes probar el modo demo.' };
   return { available: true, message: 'Enciende tu sensor y pedalea para activarlo.' };
 }
 export class BleCadenceSource {
@@ -20,6 +20,9 @@ export class BleCadenceSource {
   private attempts = 0;
   private initialized = false;
   info: SensorInfo = { status: 'idle', name: '', message: '' };
+  /** `performance.now()` of the last crank notification, whether or not the pedals moved. */
+  lastDataAt: number | null = null;
+  get turns() { return this.calculator.turns; }
   onChange: (info: SensorInfo) => void = () => {};
   onCadence: (rpm: number) => void = () => {};
 
@@ -65,6 +68,7 @@ export class BleCadenceSource {
       if (generation !== this.generation) return;
       const measurement = parseCsc(value);
       if (!measurement) return;
+      this.lastDataAt = performance.now();
       const rpm = this.calculator.update(measurement);
       if (rpm !== null) this.onCadence(rpm);
     });
@@ -86,7 +90,7 @@ export class BleCadenceSource {
   }
   async stop() {
     ++this.generation; clearTimeout(this.retry); this.attempts = 0;
-    const device = this.device; this.device = null; this.calculator.reset();
+    const device = this.device; this.device = null; this.calculator.reset(); this.lastDataAt = null;
     if (device) await BleClient.disconnect(device.deviceId).catch(() => {});
     this.update('idle');
   }

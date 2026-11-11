@@ -21,7 +21,7 @@
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Pedal emite tu cadencia por Bluetooth al visor Ciklism.</string>
+	<string>Pedal emite tu cadencia por Bluetooth al visor MegaBici.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Pedal usa el acelerómetro para detectar tus pedaladas.</string>
 	<key>UIFileSharingEnabled</key>

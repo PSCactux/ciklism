@@ -2,7 +2,7 @@ import { chromium } from '@playwright/test';
 import { readFile, readdir } from 'node:fs/promises';
 
 // Rasterize our vector mark for native launchers and iOS home-screen installation.
-const browser = await chromium.launch({ executablePath: process.env.CIKLISM_CHROME_PATH || undefined });
+const browser = await chromium.launch({ executablePath: process.env.MEGABICI_CHROME_PATH || undefined });
 const page = await browser.newPage({ deviceScaleFactor: 1 });
 const svg = await readFile(new URL('../public/icon.svg', import.meta.url), 'utf8');
 async function icon(path, size, padding = 0) {

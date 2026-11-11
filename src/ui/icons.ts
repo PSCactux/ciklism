@@ -16,6 +16,7 @@ const paths = {
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
   upload: '<path d="M12 15V3m-5 5 5-5 5 5M4 16v5h16v-5"/>',
+  gauge: '<path d="M4.5 18a9 9 0 1 1 15 0M12 14l4.5-5"/><circle cx="12" cy="14" r="1.6"/>',
   lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 7v-3"/>',
 } as const;
 export const icons = Object.fromEntries(Object.entries(paths).map(([name, path]) => [name,

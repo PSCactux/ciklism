@@ -1,8 +1,10 @@
-# Ciklism
+# MegaBici
 
 An indoor cycling viewer for web, iPhone and Android. A Bluetooth cadence sensor drives a first-person ride through a 3D landscape. One TypeScript codebase covers all three: Babylon.js renders the scene and Capacitor wraps it for mobile.
 
 **Live demo:** [pscactux.github.io/ciklism](https://pscactux.github.io/ciklism/). It runs without a sensor: press *Probar la ruta*.
+
+MegaBici was first released as Ciklism; the repository keeps that name.
 
 ![Riding the meadow circuit in demo mode](docs/images/ride.jpg)
 
@@ -18,13 +20,14 @@ The interface is in Spanish. Code, comments and docs are in English.
 - Six routes from 1 to 20 km (circuits and point-to-point), each rideable in reverse and at three times of day.
 - First-person camera with handlebar, crank-driven sway, terrain, forest, river, lake and reservoir.
 - Bluetooth Cycling Speed and Cadence (CSC) sensors. Browsers use Web Bluetooth; the iOS and Android apps use the native BLE plugin. Includes bounded automatic reconnection and a manual reconnect.
-- Nine gears and per-sensor calibration. When you stop pedalling, coasting is modelled with gravity, rolling resistance and air drag.
+- Calibration mode: a live sensor check (signal light, cadence, crank-turn counter), speed matched to the bike's own display, and the bike's resistance levels registered one by one. Rides then use those levels instead of the nine built-in gears, and the course can ask for a level as the slope changes.
+- When you stop pedalling, coasting is modelled with gravity, rolling resistance and air drag.
 - A clearly labelled demo mode with a simulated cadence slider. Demo rides never count towards records or XP.
 - Laps, sectors, personal records and a ghost of your best lap across sessions.
-- Local history with charts, XP, levels, unlockable routes and achievements. Everything is stored in IndexedDB, with JSON export/import that is idempotent on re-import.
+- Every route and time of day is available from the first ride. Local history with charts, XP, levels and achievements. Everything is stored in IndexedDB, with JSON export/import that is idempotent on re-import.
 - Auto-pause when the app is hidden. Recovery checkpoints every 15 s, so an unexpected close still saves the ride.
 - Installable PWA that works offline after the first visit.
-- Keyboard controls: `+`/`↑` and `-`/`↓` shift gears, space pauses. The same controls are available as touch buttons.
+- Keyboard controls: `+`/`↑` and `-`/`↓` shift gears or levels, space pauses. The same controls are available as touch buttons.
 
 [`pedal-ios/`](pedal-ios/README.md) is a separate small SwiftUI app. It turns an iPhone strapped to your shoe into a CSC cadence sensor, using the accelerometer.
 
@@ -70,7 +73,7 @@ const rpm = revolutions * 60 * 1024 / time;
 return rpm <= 250 ? rpm : null;
 ```
 
-**Fixed-step physics.** `RideClock` advances the simulation in fixed 1/30 s steps, whatever the display refresh rate, and discards gaps longer than one second. A suspended tab therefore never earns kilometres. While you pedal, speed eases towards `cadence × gear ratio × calibration`. Without cadence, speed follows a coast model with gravity along the slope, rolling resistance and quadratic drag (`src/domain/ride.ts`).
+**Fixed-step physics.** `RideClock` advances the simulation in fixed 1/30 s steps, whatever the display refresh rate, and discards gaps longer than one second. A suspended tab therefore never earns kilometres. While you pedal, speed eases towards `cadence × metres per crank turn`: the ratio of the built-in gear, or the one measured for that level of the rider's bike (`src/domain/bike.ts`). Without cadence, speed follows a coast model with gravity along the slope, rolling resistance and quadratic drag (`src/domain/ride.ts`).
 
 **One renderer, phone-sized budget.** The scene is built for phones first (details in [docs/rendering.md](docs/rendering.md)):
 
@@ -85,7 +88,7 @@ return rpm <= 250 ? rpm : null;
 
 | Path | Contents |
 | --- | --- |
-| `src/domain` | Ride physics, CSC parsing, laps and ghost, sessions, progress. Platform-independent |
+| `src/domain` | Ride physics, CSC parsing, bike calibration and levels, laps and ghost, sessions, progress. Platform-independent |
 | `src/render` | Babylon scene, terrain and road geometry, vegetation, sky, materials, frame budget |
 | `src/platform` | BLE cadence source and IndexedDB storage |
 | `src/routes` | Route JSON files and the catalogue |
