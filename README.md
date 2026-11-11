@@ -6,7 +6,7 @@ An indoor cycling viewer for web, iPhone and Android. A Bluetooth cadence sensor
 
 MegaBici was first released as Ciklism; the repository keeps that name.
 
-![Riding the meadow circuit in demo mode](docs/images/ride.jpg)
+![Riding past a village on the hills circuit, in demo mode](docs/images/ride.jpg)
 
 <p>
   <img src="docs/images/home.jpg" alt="Route catalogue and 3D preview" width="78%">
